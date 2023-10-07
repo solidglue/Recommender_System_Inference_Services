@@ -122,7 +122,6 @@ func RestServerRunner() {
 	} else {
 		go httpServer.restNoskywalkingServerRunner(paths, workFunHandlers)
 	}
-	//go server.MultiStart(paths, workFunHandlers)   //需要加go，让其后台执行，否则会一直占用主进程，不执行下边内容
 
 	select {}
 }
