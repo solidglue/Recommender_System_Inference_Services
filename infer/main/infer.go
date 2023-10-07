@@ -17,9 +17,7 @@ var nacosPort uint64
 //TODO:lock和指针梳理。20230804
 
 func init() {
-	// dubboConf = *flags.Dubbo_serverconf
-	// nacosIp = *flags.Nacos_ip
-	// nacosPort = uint64(*flags.Nacos_port)
+
 
 	flagFactory := flags.FlagFactory{}
 	flagDubbo := flagFactory.FlagDubboFactory()
