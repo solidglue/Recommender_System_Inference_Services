@@ -1,38 +1,38 @@
 package apis
 
-type recResponse struct {
+type RecResponse struct {
 	code    int
 	message string
 	data    []string
 }
 
 // code
-func (r *recResponse) SetCode(code int) {
+func (r *RecResponse) SetCode(code int) {
 	r.code = code
 }
 
-func (r *recResponse) GetCode() int {
+func (r *RecResponse) GetCode() int {
 	return r.code
 }
 
 // message
-func (r *recResponse) SetMessage(message string) {
+func (r *RecResponse) SetMessage(message string) {
 	r.message = message
 }
 
-func (r *recResponse) GetMessage() string {
+func (r *RecResponse) GetMessage() string {
 	return r.message
 }
 
 // data
-func (r *recResponse) SetData(data []string) {
+func (r *RecResponse) SetData(data []string) {
 	r.data = data
 }
 
-func (r *recResponse) GetData() []string {
+func (r *RecResponse) GetData() []string {
 	return r.data
 }
 
-func (rsp *recResponse) JavaClassName() string {
+func (rsp *RecResponse) JavaClassName() string {
 	return "com.xxx.www.infer.RecResponse"
 }

@@ -1,6 +1,6 @@
 package apis
 
-type recRequest struct {
+type RecRequest struct {
 	dataId      string //nacos dataid
 	groupId     string
 	namespaceId string
@@ -11,68 +11,68 @@ type recRequest struct {
 }
 
 // dataId
-func (r *recRequest) SetDataId(dataId string) {
+func (r *RecRequest) SetDataId(dataId string) {
 	r.dataId = dataId
 }
 
-func (r *recRequest) GetDataId() string {
+func (r *RecRequest) GetDataId() string {
 	return r.dataId
 }
 
 // groupId
-func (r *recRequest) SetGroupId(groupId string) {
+func (r *RecRequest) SetGroupId(groupId string) {
 	r.groupId = groupId
 }
 
-func (r *recRequest) GetGroupId() string {
+func (r *RecRequest) GetGroupId() string {
 	return r.groupId
 }
 
 // namespaceId
-func (r *recRequest) SetNamespaceId(namespaceId string) {
+func (r *RecRequest) SetNamespaceId(namespaceId string) {
 	r.namespaceId = namespaceId
 }
 
-func (r *recRequest) GetNamespaceId() string {
+func (r *RecRequest) GetNamespaceId() string {
 	return r.namespaceId
 }
 
 // modelType
-func (r *recRequest) SetModelType(modelType string) {
+func (r *RecRequest) SetModelType(modelType string) {
 	r.modelType = modelType
 }
 
-func (r *recRequest) GetModelType() string {
+func (r *RecRequest) GetModelType() string {
 	return r.modelType
 }
 
 // userId
-func (r *recRequest) SetUserId(userId string) {
+func (r *RecRequest) SetUserId(userId string) {
 	r.userId = userId
 }
 
-func (r *recRequest) GetUserId() string {
+func (r *RecRequest) GetUserId() string {
 	return r.userId
 }
 
 // recallNum
-func (r *recRequest) SetRecallNum(recallNum int32) {
+func (r *RecRequest) SetRecallNum(recallNum int32) {
 	r.recallNum = recallNum
 }
 
-func (r *recRequest) GetRecallNum() int32 {
+func (r *RecRequest) GetRecallNum() int32 {
 	return r.recallNum
 }
 
 // itemList
-func (r *recRequest) SetItemList(itemList []string) {
+func (r *RecRequest) SetItemList(itemList []string) {
 	r.itemList = itemList
 }
 
-func (r *recRequest) GetItemList() []string {
+func (r *RecRequest) GetItemList() []string {
 	return r.itemList
 }
 
-func (req *recRequest) JavaClassName() string {
+func (req *RecRequest) JavaClassName() string {
 	return "com.xxx.www.infer.RecRequest"
 }
