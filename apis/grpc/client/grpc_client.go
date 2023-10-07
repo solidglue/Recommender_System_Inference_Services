@@ -10,39 +10,34 @@ import (
 )
 
 const (
-	// gRPC服务地址. 改成配置
+	// gRPC addrs.
 	Address = "10.194.140.50:8221"
 )
 
-func req_grpc() {
-
+func requestGrpcService() {
 	conn, err := grpc.Dial(Address, grpc.WithInsecure())
 	if err != nil {
 		logs.Error("GRPC dial failed")
 	}
 	defer conn.Close()
 
-	client := grpc_server.NewGrpcRecommendServerServiceClient(conn)
-
-	itemid_list := []string{"727407331", "745256420", "628549489", "637445275", "11111111111"} //"727407331","745256420","628549489","637445275","11111111111"
-
+	itemList := []string{"7000000", "7000001", "7000002", "7000003"}
 	req := &grpc_server.RecommendRequest{
-		UserId: "13438935173",
+		UserId: "real userid",
 		//ItemList: &grpc_server.StringList{itemid_list},
-		ItemList: &grpc_server.StringList{Value: itemid_list},
+		ItemList: &grpc_server.StringList{Value: itemList},
 	}
-
-	fmt.Println("Address:", Address)
 
 	fmt.Println("REQUEST:", req)
-
-	//res, err := client.UinonRank(context.Background(), req)
+	client := grpc_server.NewGrpcRecommendServerServiceClient(conn)
 	res, err := client.GrpcRecommendServer(context.Background(), req)
-
 	if err != nil {
-		logs.Error("GRPC req failed")
+		logs.Error("GRPC request failed")
 	}
-
 	fmt.Println("RESPONSE:", res)
+}
 
+// TODO: change 2 unit test.
+func main() {
+	requestGrpcService()
 }

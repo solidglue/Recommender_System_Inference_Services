@@ -5,7 +5,6 @@ import "flag"
 var flagsNacosInstance *flagsNacos
 
 type flagsNacos struct {
-
 	//nacos
 	nacosIp        *string
 	nacosPort      *int

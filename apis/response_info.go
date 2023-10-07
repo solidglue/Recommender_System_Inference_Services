@@ -1,9 +1,9 @@
 package apis
 
 type RecResponse struct {
-	code    int //请求状态
+	code    int
 	message string
-	data    []string //物品信息
+	data    []string
 }
 
 // code

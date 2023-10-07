@@ -11,7 +11,6 @@ func init() {
 
 //start file factory
 func (f *FlagFactory) FlagServiceConfigFactory() *FlagServiceStartInfo {
-
 	fs := getFlagServiceStartInfoInstance()
 	fs.setServiceConfigFile()
 	fs.setServiceRestPort()
@@ -23,7 +22,6 @@ func (f *FlagFactory) FlagServiceConfigFactory() *FlagServiceStartInfo {
 
 //cache factory
 func (f *FlagFactory) FlagCacheFactory() *flagCache {
-
 	fc := getFlagCacheInstance()
 	fc.setBigcacheShards()
 	fc.setBigcacheLifeWindowS()
@@ -38,7 +36,6 @@ func (f *FlagFactory) FlagCacheFactory() *flagCache {
 
 //dubbo factory
 func (f *FlagFactory) FlagDubboFactory() *flagDubbo {
-
 	fd := getFlagDubboInstance()
 	fd.setDubboServiceFile()
 
@@ -47,7 +44,6 @@ func (f *FlagFactory) FlagDubboFactory() *flagDubbo {
 
 //dystrix factory
 func (f *FlagFactory) FlagHystrixFactory() *flagsHystrix {
-
 	fh := getFlagsHystrixInstance()
 	fh.setHystrixErrorPercentThreshold()
 	fh.setHystrixLowerRankNum()
@@ -62,7 +58,6 @@ func (f *FlagFactory) FlagHystrixFactory() *flagsHystrix {
 
 //logs factory
 func (f *FlagFactory) FlagLogFactory() *flagsLog {
-
 	fl := getFlagLogInstance()
 	fl.setLogFileName()
 	fl.setLogLevel()
@@ -74,9 +69,7 @@ func (f *FlagFactory) FlagLogFactory() *flagsLog {
 
 //nacos factory
 func (f *FlagFactory) FlagNacosFactory() *flagsNacos {
-
 	fn := getFlagsNacosInstance()
-
 	fn.setNacosIp()
 	fn.setNacosPort()
 	fn.setNacosUsername()
@@ -91,7 +84,6 @@ func (f *FlagFactory) FlagNacosFactory() *flagsNacos {
 
 //redis factory
 func (f *FlagFactory) FlagRedisFactory() *FlagRedis {
-
 	fd := getFlagRedisInstance()
 	fd.setRedisPassword()
 
@@ -100,7 +92,6 @@ func (f *FlagFactory) FlagRedisFactory() *FlagRedis {
 
 //skywalking factory
 func (f *FlagFactory) FlagSkywalkingFactory() *flagsSkywalking {
-
 	fs := getFlagsSkywalkingInstance()
 	fs.setSkywalkingWhetheropen()
 	fs.setSkywalkingIp()
@@ -112,7 +103,6 @@ func (f *FlagFactory) FlagSkywalkingFactory() *flagsSkywalking {
 
 //tensorflow factory
 func (f *FlagFactory) FlagTensorflowFactory() *flagTensorflow {
-
 	ft := getFlagTensorflowInstance()
 	ft.setTfservingModelVersion()
 	ft.setTfservingTimeoutMs()

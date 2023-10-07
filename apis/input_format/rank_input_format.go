@@ -11,7 +11,6 @@ type RankInputFormat struct {
 }
 
 func (d *RankInputFormat) InputCheckAndFormat(in *apis.RecRequest, serverConn *service_config.ServiceConfig) (cores.DeepFM, error) {
-
 	deepfm := cores.DeepFM{}
 
 	//dataid
@@ -28,7 +27,7 @@ func (d *RankInputFormat) InputCheckAndFormat(in *apis.RecRequest, serverConn *s
 	//itemlist
 	itemList := make([]string, 0)
 	itemListIn := in.GetItemList()
-	if in.GetItemList() == nil {
+	if itemListIn == nil {
 		return deepfm, errors.New("itemlist can not be empty")
 	} else {
 		itemList = itemListIn

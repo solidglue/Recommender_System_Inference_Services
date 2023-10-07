@@ -13,8 +13,6 @@ import (
 	types "github.com/gogo/protobuf/types"
 )
 
-//MODELconf 是不是放在这定义比较好，这个类就是model类。faiss同理
-
 var tfservingModelVersion int64
 var tfservingTimeout int64
 var modelClientInstance *ModelClient
@@ -29,21 +27,12 @@ type ModelClient struct {
 }
 
 func init() {
-	// tfservingModelVersion = *flags.Tfserving_model_version
-	// tfservingTimeout = *flags.Tfserving_timeoutMS
-
 	flagFactory := flags.FlagFactory{}
 	flagTensorflow := flagFactory.FlagTensorflowFactory()
 
 	tfservingModelVersion = *flagTensorflow.GetTfservingModelVersion()
 	tfservingTimeout = *flagTensorflow.GetTfservingTimeoutMs()
-
-	//modelClientInstance = new(ModelClient)
 }
-
-// func getModelClientInstance() *ModelClient {
-// 	return modelClientInstance
-// }
 
 // modelName
 func (f *ModelClient) setModelName(modelName string) {
@@ -111,7 +100,6 @@ func (m *ModelClient) ConfigLoad(domain string, dataId string, modelConfStr stri
 		itemRedisKeyPre := modelConfTmp["itemRedisKeyPre"].(string)
 
 		//set
-
 		m.setModelName(tmpModelName_)
 		m.setTfservingModelName(modelName)
 		m.setTfservingGrpcPool(tfservingGrpcPool)
@@ -120,11 +108,9 @@ func (m *ModelClient) ConfigLoad(domain string, dataId string, modelConfStr stri
 	}
 
 	return nil
-
 }
 
 func (m *ModelClient) requestTfservering(userExamples *[][]byte, userContextExamples *[][]byte, itemExamples *[][]byte, tensorName string) (*[]float32, error) {
-
 	grpcConn, err := m.GetTfservingGrpcPool().Get()
 	defer m.GetTfservingGrpcPool().Put(grpcConn)
 
@@ -141,8 +127,6 @@ func (m *ModelClient) requestTfservering(userExamples *[][]byte, userContextExam
 		},
 		Inputs: make(map[string]*framework.TensorProto),
 	}
-
-	//TODO:封装，提取公共方法
 
 	//user examples
 	tensorProtoUser := &framework.TensorProto{

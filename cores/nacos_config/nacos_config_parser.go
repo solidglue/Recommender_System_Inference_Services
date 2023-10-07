@@ -5,8 +5,6 @@ import (
 	"infer-microservices/utils"
 )
 
-// service conf  struct, help to parse input config file
-
 var nacosContentInstance *NacosContent
 
 type NacosContent struct {
@@ -35,7 +33,6 @@ type Config_ struct {
 
 // parse service config file, which contains index info、redis info and model info etc.
 func (s *NacosContent) InputServiceConfigParse(content string) (string, string, string, string) {
-
 	json.Unmarshal([]byte(string(content)), s)
 	redisConfStr := utils.Struct2Json(s.config.redisConfNacos)
 	modelConfStr := utils.Struct2Json(s.config.modelConfNacos)

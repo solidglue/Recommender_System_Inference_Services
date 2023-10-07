@@ -10,20 +10,6 @@ import (
 	"google.golang.org/grpc"
 )
 
-//TODO:https://zhuanlan.zhihu.com/p/612406500  https://cloud.tencent.com/developer/article/2230478
-//TODO: 调研grpc连接池是否必要，长连接短连接，http2多路复用
-//连接池性能更好（9w tps vs 40w tps）：https://www.jianshu.com/p/062b5462d3aa   队头阻塞（Head-of-line blocking）。
-//多路复用：https://zhuanlan.zhihu.com/p/555785707
-
-//连接池设计：基于GRPC的多路复用、超时重连特性，我们很容易实现GRPC连接池。
-//https://zhuanlan.zhihu.com/p/100200985
-//https://github.com/shimingyah/pool
-
-//面试官:如何实现一个连接池，我当场懵了
-//https://zhuanlan.zhihu.com/p/574549786
-
-//长连接和短连接：https://zhuanlan.zhihu.com/p/433961209
-
 type GRPCInterface interface {
 	Get()
 	Put(conn *grpc.ClientConn)
@@ -65,10 +51,8 @@ func (c *GRPCPool) Get() (*grpc.ClientConn, error) {
 			if wrapConn == nil {
 				return nil, errClosed
 			}
-			//判断是否超时，超时则丢弃
 			if timeout := c.IdleTimeout; timeout > 0 {
 				if wrapConn.t.Add(timeout).Before(time.Now()) {
-					//丢弃并关闭该链接
 					c.close(wrapConn.conn)
 					continue
 				}
@@ -102,7 +86,6 @@ func (c *GRPCPool) Put(conn *grpc.ClientConn) error {
 	case c.conns <- &grpcIdleConn{conn: conn, t: time.Now()}:
 		return nil
 	default:
-		//连接池已满，直接关闭该链接
 		return c.close(conn)
 	}
 }
@@ -176,17 +159,16 @@ func NewGRPCPool(o *Options, dialOptions ...grpc.DialOption) (*GRPCPool, error) 
 }
 
 func CreateGrpcConn(data map[string]interface{}) (*GRPCPool, error) {
-
 	if _, ok := data["addrs"]; !ok {
 		return nil, errors.New("addrs no found in grpc config")
 	}
 
 	if _, ok := data["pool_size"]; !ok {
-		data["pool_size"] = float64(25) //20230104, 如果不传，默认赋值。推荐引擎
+		data["pool_size"] = float64(100)
 	}
 
 	if _, ok := data["timeout"]; !ok {
-		data["timeout"] = float64(1000) //20230104, 如果不传，默认赋值。推荐引擎
+		data["timeout"] = float64(1000)
 	}
 
 	addrs_raw := data["addrs"].([]interface{})
@@ -202,7 +184,6 @@ func CreateGrpcConn(data map[string]interface{}) (*GRPCPool, error) {
 		addrs = append(addrs, addr.(string))
 	}
 
-	//这里貌似有问题，传入的类型应该是time.duration
 	options := &Options{
 		InitTargets:  addrs,
 		InitCap:      initCap,

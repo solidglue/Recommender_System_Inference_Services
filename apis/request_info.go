@@ -1,14 +1,13 @@
 package apis
 
-
 type RecRequest struct {
-	dataId      string //模型id，场景-模型            //必填
+	dataId      string //nacos dataid
 	groupId     string
 	namespaceId string
-	modelType   string   //召回，排序
-	userId      string   //用户id                      //必填
-	recallNum   int32    //返回条数                     //返回条数，粗排/召回。         注册传入
-	itemList    []string //item列表                    //必填
+	modelType   string //recall or rank
+	userId      string
+	recallNum   int32    //recall num
+	itemList    []string //rank items
 }
 
 // dataId
@@ -75,5 +74,5 @@ func (r *RecRequest) GetItemList() []string {
 }
 
 func (req *RecRequest) JavaClassName() string {
-	return "com.xxx.www.infer.RecRequest" // 如果与 Java 互通，需要与 Java 侧 User class全名对应,
+	return "com.xxx.www.infer.RecRequest"
 }

@@ -15,16 +15,7 @@ import (
 	"github.com/allegro/bigcache"
 )
 
-//TODO: 使用多态，召回排序的取向量、返回结果等可以整合成多态；
-//TODO: 将各方法里频繁取conf的变量，写在类里边（成为类属性
-//TODO: 定义interface接口，清晰的看到哪些方法（Recall、Rank）
-
-//FIX:go-cache没有对内存使用大小或存储数量进行限制，可能会造成内存峰值较高；但是可以通过预估流量用hystrix熔断
-//INFO:MMO, go-cache can't set MaxCacheSize. change to use bigcache.
-
 var bigCacheConfRecallResult bigcache.Config
-
-//TODO: 召回排序可以共同实现一个推理接口，例如3个方法，召回实现2个，排序实现2个，共同实现了结果处理
 
 type Dssm struct {
 	userId        string
@@ -33,7 +24,6 @@ type Dssm struct {
 }
 
 func init() {
-
 	bigCacheConfRecallResult = bigcache.Config{
 		Shards:             shards,
 		LifeWindow:         lifeWindowS * time.Minute,
@@ -74,9 +64,7 @@ func (d *Dssm) getServiceConfig() *service_config.ServiceConfig {
 	return d.serviceConfig
 }
 
-// TODO:拆分很go2sky和非go2sky
 func (d *Dssm) RecallInferSkywalking(r *http.Request) (map[string]interface{}, error) {
-
 	response := make(map[string]interface{}, 0)
 	cacheKeyPrefix := d.getUserId() + d.serviceConfig.GetServiceId() + "_recallResult"
 	tensorName := "user_embedding"
@@ -150,7 +138,6 @@ func (d *Dssm) RecallInferSkywalking(r *http.Request) (map[string]interface{}, e
 	spanUnionEmFr.End()
 
 	//format result.
-
 	spanUnionEmOut, _, err := common.Tracer.CreateLocalSpan(r.Context())
 	if err != nil {
 		return nil, err
@@ -180,7 +167,6 @@ func (d *Dssm) RecallInferSkywalking(r *http.Request) (map[string]interface{}, e
 }
 
 func (d *Dssm) RecallInferNoSkywalking(r *http.Request) (map[string]interface{}, error) {
-
 	response := make(map[string]interface{}, 0)
 	cacheKeyPrefix := d.getUserId() + d.serviceConfig.GetServiceId() + "_recallResult"
 	tensorName := "user_embedding"
@@ -199,7 +185,6 @@ func (d *Dssm) RecallInferNoSkywalking(r *http.Request) (map[string]interface{},
 			return nil, err
 		}
 		return response, nil
-
 	}
 
 	//get infer samples.
@@ -243,7 +228,6 @@ func (d *Dssm) RecallInferNoSkywalking(r *http.Request) (map[string]interface{},
 }
 
 func (d *Dssm) recallResultFmt(recallResult *[]*faiss_index.ItemInfo) (*[]map[string]interface{}, error) {
-
 	recall := make([]map[string]interface{}, 0)
 	recallTmp := make(chan map[string]interface{}, len(*recallResult)) // 20221011
 	var wg sync.WaitGroup

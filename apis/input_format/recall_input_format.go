@@ -11,7 +11,6 @@ type RecallInputFormat struct {
 }
 
 func (d *RecallInputFormat) InputCheckAndFormat(in *apis.RecRequest, serverConn *service_config.ServiceConfig) (cores.Dssm, error) {
-
 	dssm := cores.Dssm{}
 
 	//dataid

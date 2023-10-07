@@ -3,50 +3,39 @@ package client
 import (
 	"context"
 	"fmt"
-
 	"infer-microservices/apis"
 	"infer-microservices/apis/dubbo/server/api"
+	"infer-microservices/utils/logs"
 
-	_ "dubbo.apache.org/dubbo-go/v3/imports" // dubbogo 框架依赖，所有dubbogo进程都需要隐式引入一次
-	//"deepmodel_server/mg_micro_server/dubbogo/api"
+	"dubbo.apache.org/dubbo-go/v3/config"
+	_ "dubbo.apache.org/dubbo-go/v3/imports"
 )
 
-func req1() {
+func requestDubboService() {
+	itemList := []string{"7000000", "7000001", "7000002", "7000003"}
 
-	item_list := []string{"677387947", "608548125", "608604182", "637445275", "11111111111"}
-	// req := apis.RecRequest{
-
-	// 	DataId:   "dssm-120|recengine-model4g",
-	// 	UserId:   "00149a82cd13ce6ed0c73bc5f522b5a4",
-	// 	ItemList: item_list,
-	// }
 	req := apis.RecRequest{}
-	req.SetDataId("dssm-120|recengine-model4g")
-	req.SetUserId("00149a82cd13ce6ed0c73bc5f522b5a4")
-	req.SetItemList(item_list)
+	req.SetDataId("dataid|groupid") //nacos dataid|groupid
+	req.SetUserId("real userid")    //userid
+	req.SetItemList(itemList)       //rank items
 
-	// 发起调用
+	// request dubbo infer service
 	rsp, err := api.DubbogoInferServiceClient.DubboRecommendServer(context.TODO(), &req)
 	if err != nil {
-		fmt.Println(">>>>>>>>>>ERRRRRRRRRRRROR>>>>>>>>>>>>", err)
+		logs.Error(err)
 	}
-	//logger.Infof("response result: %+v", rsp)
 
 	for i := 0; i < len(rsp.GetData()); i++ {
 		fmt.Println(i, req.GetUserId(), rsp.GetData()[i])
 	}
-
 }
 
-// // export DUBBO_GO_CONFIG_PATH=dubbogo.yml 运行前需要设置环境变量，指定配置文件位置
-// func main() {
-// 	// 启动框架
-// 	//if err := config.Load(); err != nil{     //err := config.Load(config.WithPath("./conf/dubbo.yml"))
-// 	if err := config.Load(config.WithPath("dubbogo.yml")); err != nil {
-// 		panic(err)
-// 	}
+// TODO: change 2 unit test.
+func main() {
+	// export DUBBO_GO_CONFIG_PATH=dubbogo.yml or load it in code.
+	if err := config.Load(config.WithPath("conf/dubbogo_client.yml")); err != nil {
+		panic(err)
+	}
 
-// 	req1()
-// 	req2()
-
-// }
+	requestDubboService() //recall or rank depends on nacos config file.
+}

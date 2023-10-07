@@ -5,7 +5,6 @@ import "flag"
 var flagsHystrixInstance *flagsHystrix
 
 type flagsHystrix struct {
-
 	// hystrix
 	hystrixTimeoutMs              *int
 	hystrixMaxConcurrentRequests  *int

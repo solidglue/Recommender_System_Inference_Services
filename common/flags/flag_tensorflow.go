@@ -5,7 +5,6 @@ import "flag"
 var flagTensorflowInstance *flagTensorflow
 
 type flagTensorflow struct {
-
 	// tensorflow
 	tfservingModelVersion *int64
 	tfservingTimeoutMs    *int64

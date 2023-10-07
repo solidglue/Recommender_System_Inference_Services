@@ -16,8 +16,8 @@ dubbo:
       registry-type: interface
   protocols:
     dubbo:
-      name: dubbo # 协议名 dubbo
-      port: 10000 # 监听端口     
+      name: dubbo # 
+      port: 10000 #      
   provider:
     register: true
     registryIDS:

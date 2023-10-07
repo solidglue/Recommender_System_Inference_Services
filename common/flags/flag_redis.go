@@ -5,7 +5,6 @@ import "flag"
 var flagRedisInstance *FlagRedis
 
 type FlagRedis struct {
-
 	//redis
 	redisPassword *string
 }

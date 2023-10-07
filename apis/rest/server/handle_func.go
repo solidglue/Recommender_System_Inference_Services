@@ -11,8 +11,7 @@ import (
 	httpPlugin "github.com/SkyAPM/go2sky/plugins/http"
 )
 
-//TODO: test gin api, test dubbo restful api
-//https://cn.dubbo.apache.org/zh-cn/blog/2021/01/14/dubbo-go-%e4%b8%ad-rest-%e5%8d%8f%e8%ae%ae%e5%ae%9e%e7%8e%b0/
+//TODO: test gin rest api, test dubbo restful api
 
 var restListenPort uint
 var maxCpuNum int
@@ -22,26 +21,16 @@ var skywalkingPort int
 var skywalkingServerName string
 var NacosIP string
 var NacosPort uint64
-
 var restRecallInfer restInferInterface
 var restRankInfer restInferInterface
 
 type WorkFunc func(w http.ResponseWriter, r *http.Request)
-
 type HttpServer struct {
 	ServerIP string
 	Port     uint
 }
 
 func init() {
-
-	// restListenPort = *flags.Rest_server_port
-	// maxCpuNum = *flags.Max_cpu_num
-	// skywalkingWeatherOpen = *flags.Skywalking_whetheropen
-	// skywalkingIP = *flags.Skywalking_ip
-	// skywalkingPort = *flags.Skywalking_port
-	// skywalkingServerName = *flags.Skywalking_servername
-
 	flagFactory := flags.FlagFactory{}
 	flagServiceConfig := flagFactory.FlagServiceConfigFactory()
 	flagSkywalking := flagFactory.FlagSkywalkingFactory()
@@ -52,7 +41,6 @@ func init() {
 	skywalkingIP = *flagSkywalking.GetSkywalkingIp()
 	skywalkingPort = *flagSkywalking.GetSkywalkingPort()
 	skywalkingServerName = *flagSkywalking.GetSkywalkingServername()
-
 }
 
 func NewHttpServer() *HttpServer {
@@ -60,7 +48,6 @@ func NewHttpServer() *HttpServer {
 }
 
 func (httpsvr *HttpServer) restNoskywalkingServerRunner(path []string, workFunc []WorkFunc) error {
-
 	for idx, p := range path {
 		http.HandleFunc(p, workFunc[idx])
 	}
@@ -71,7 +58,7 @@ func (httpsvr *HttpServer) restNoskywalkingServerRunner(path []string, workFunc 
 	}
 
 	runtime.GOMAXPROCS(cpuNum)
-	logs.Debug("cup num:", cpuNum)
+	logs.Info("cup num:", cpuNum)
 
 	addr := fmt.Sprintf(":%d", restListenPort)
 	err := http.ListenAndServe(addr, nil)
@@ -84,20 +71,18 @@ func (httpsvr *HttpServer) restNoskywalkingServerRunner(path []string, workFunc 
 }
 
 func (httpsvr *HttpServer) restSkywalkingServerRunner(go2skyAddr string, serverName string, path []string, workFunc []WorkFunc) error {
-
 	common.SkywalkingTracer(go2skyAddr, serverName)
 
 	sm, err := httpPlugin.NewServerMiddleware(common.Tracer)
 	if err != nil {
 		logs.Error("create server middleware error %v \n", err)
 	}
-
-	fmt.Println("path:", path)
-	fmt.Println("workFunc:", workFunc)
+	logs.Info("path:", path)
+	logs.Info("workFunc:", workFunc)
 
 	route := http.NewServeMux()
 	for idx, p := range path {
-		fmt.Println("p workFunc[]:", p, workFunc[idx])
+		logs.Info("p workFunc[]:", p, workFunc[idx])
 		route.HandleFunc(p, workFunc[idx])
 	}
 
@@ -107,11 +92,10 @@ func (httpsvr *HttpServer) restSkywalkingServerRunner(go2skyAddr string, serverN
 	}
 
 	runtime.GOMAXPROCS(cpuNum)
-	logs.Debug("cup num:", cpuNum)
+	logs.Info("cup num:", cpuNum)
 
 	addr := fmt.Sprintf(":%d", restListenPort)
 	err = http.ListenAndServe(addr, sm(route))
-	//err := http.ListenAndServe(":8651", sm(route))
 	if err == nil {
 		logs.Error("server start succ ip:port ", err)
 		return nil
@@ -121,25 +105,22 @@ func (httpsvr *HttpServer) restSkywalkingServerRunner(go2skyAddr string, serverN
 }
 
 func RestServerRunner() {
-
 	paths := []string{
 		"/recall", "/rank",
 	}
 
 	restRecallInfer = &recallServer{}
 	restRankInfer = &rankServer{}
-
 	workFunHandlers := []WorkFunc{
 		restRecallInfer.restInferServer, restRankInfer.restInferServer,
 	}
 
 	httpServer := NewHttpServer()
-
 	if skywalkingWeatherOpen {
 		go2skyAddr := skywalkingIP + ":" + fmt.Sprintf(":%d", skywalkingPort)
 		go httpServer.restSkywalkingServerRunner(go2skyAddr, skywalkingServerName, paths, workFunHandlers)
 	} else {
-		go httpServer.restNoskywalkingServerRunner(paths, workFunHandlers) //需要加go，让其后台执行，否则会一直占用主进程，不执行下边内容
+		go httpServer.restNoskywalkingServerRunner(paths, workFunHandlers)
 	}
 	//go server.MultiStart(paths, workFunHandlers)   //需要加go，让其后台执行，否则会一直占用主进程，不执行下边内容
 

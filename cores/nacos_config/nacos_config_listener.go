@@ -14,8 +14,6 @@ import (
 	"github.com/nacos-group/nacos-sdk-go/vo"
 )
 
-//TODO:ncos监听 观察者模式
-
 var nacosTimeoutMs uint64
 var nacosLogDir string
 var nacosCacheDir string
@@ -33,7 +31,6 @@ type NacosConnConfig struct {
 }
 
 func init() {
-
 	flagFactory := flags.FlagFactory{}
 	flagNacos := flagFactory.FlagNacosFactory()
 
@@ -43,7 +40,6 @@ func init() {
 	nacosLogLevel = *flagNacos.GetNacosLoglevel()
 	nacosUsername = *flagNacos.GetNacosUsername()
 	nacosPassword = *flagNacos.GetNacosPassword()
-
 }
 
 // dataId
@@ -98,29 +94,15 @@ func (n *NacosConnConfig) ServiceConfigListen() error {
 		return err
 	}
 
-	// //初次加载
-	// content, err := n.getNacosConfig(nacosClient)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// err = n.ServiceConfigUpdate(content)
-	// if err != nil {
-	// 	return err
-	// }
-
-	//持续监听nacos配置
 	err = n.listenNacosConfig(nacosClient)
 	if err != nil {
 		return err
 	}
 
 	return nil
-
 }
 
 func (n *NacosConnConfig) getNacosClient() (config_client.IConfigClient, error) {
-
 	serviceConf := []constant.ServerConfig{{
 		IpAddr: n.GetIp(),
 		Port:   n.GetPort(),
@@ -161,8 +143,6 @@ func (n *NacosConnConfig) getNacosConfig(nacosClient config_client.IConfigClient
 }
 
 func (n *NacosConnConfig) listenNacosConfig(nacosClient config_client.IConfigClient) error {
-
-	//监听nacos配置
 	err := nacosClient.ListenConfig(vo.ConfigParam{
 		DataId: n.GetDataId(),
 		Group:  n.GetGroupId(),
@@ -180,12 +160,10 @@ func (n *NacosConnConfig) listenNacosConfig(nacosClient config_client.IConfigCli
 }
 
 func (n *NacosConnConfig) ServiceConfigUpdate(dataId string, content string) error {
-
 	mt.Lock()
 	defer mt.Unlock()
 
 	director := cores.ServiceConfigDirector{}
-
 	NacosContent := NacosContent{}
 	domain, redisConfStr, modelConfStr, indexConfStr := NacosContent.InputServiceConfigParse(content)
 
@@ -201,5 +179,4 @@ func (n *NacosConnConfig) ServiceConfigUpdate(dataId string, content string) err
 	apis.ServiceConfigs[dataId] = &serviceConf
 
 	return nil
-
 }

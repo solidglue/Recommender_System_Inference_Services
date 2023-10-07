@@ -14,16 +14,6 @@ import (
 	"github.com/allegro/bigcache"
 )
 
-//TODO: 使用多态，召回排序的取向量、返回结果等可以整合成多态；
-//TODO: 将各方法里频繁取conf的变量，写在类里边（成为类属性
-//TODO: 定义interface接口，清晰的看到哪些方法（Recall、Rank）
-
-//FIX:go-cache没有对内存使用大小或存储数量进行限制，可能会造成内存峰值较高；但是可以通过预估流量用hystrix熔断
-
-//INFO:MMO, go-cache can't set MaxCacheSize. change to use bigcache.
-
-//TODO:Ranker  recaller接口
-
 var bigCacheConfRankResult bigcache.Config
 
 type DeepFM struct {

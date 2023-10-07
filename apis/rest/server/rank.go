@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 
-	//"fmt"
 	"infer-microservices/apis"
 	"infer-microservices/apis/input_format"
 	"infer-microservices/common/flags"
@@ -18,22 +17,12 @@ import (
 	jsoniter "github.com/json-iterator/go"
 )
 
-// TODO: 传来的参数不固定，且枚举太多，考虑反射.
-
-//TODO:改成类方法，并拆分召回排序
-
-//TODO:1.启动监听nacos配置。2.服务注册到nacos
-
 var lowerRankNum int
 
 type rankServer struct {
 }
 
 func init() {
-
-	// lowerRecallNum = *flags.Hystrix_lowerRecallNum
-	// lowerRankNum = *flags.Hystrix_lowerRankNum
-
 	flagFactory := flags.FlagFactory{}
 	flagHystrix := flagFactory.FlagHystrixFactory()
 
@@ -46,21 +35,20 @@ func (s *rankServer) restInferServer(w http.ResponseWriter, r *http.Request) {
 
 	defer func() {
 		if info := recover(); info != nil {
-			logs.Fatal("触发了宕机", info)
+			logs.Fatal("panic", info)
 			rsp := make(map[string]interface{}, 0)
 			rsp["error"] = "fatal"
 			rsp["status"] = "fail"
 			buff, _ := jsoniter.Marshal(rsp)
 			w.Write(buff)
 
-		} else {
-			//fmt.Println("程序正常退出")
-		}
+		} //else {
+		//fmt.Println("")
+		//}
 	}()
 
 	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Millisecond*150)
 	defer cancelFunc()
-
 	r = r.WithContext(ctx)
 
 	rsp := make(map[string]interface{}, 0)
@@ -84,16 +72,14 @@ func (s *rankServer) restInferServer(w http.ResponseWriter, r *http.Request) {
 		rsp["message"] = errors.New("emt input data")
 	}
 
-	//TODO:解析r，构造request
+	//INFO: convert http string data to struct data.
 	request, err := httpRequstParse(r)
 	if err != nil {
 		logs.Error(err)
 	}
+
 	ServiceConfig := apis.ServiceConfigs[request.GetDataId()]
-
-	//请求服务
 	response, err := s.restHystrixRanker("restServer", r, &request, ServiceConfig)
-
 	if err != nil {
 		logs.Error(err)
 	} else {
@@ -105,10 +91,9 @@ func (s *rankServer) restInferServer(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *rankServer) restHystrixRanker(serverName string, r *http.Request, in *apis.RecRequest, ServiceConfig *service_config.ServiceConfig) (map[string]interface{}, error) {
-
 	response := make(map[string]interface{}, 0)
 	hystrix.Do(serverName, func() error {
-		// talk to other services
+		// request recall / rank func.
 		response_, err := s.restRanker(r, in, ServiceConfig)
 		if err != nil {
 			logs.Error(err)
@@ -117,7 +102,7 @@ func (s *rankServer) restHystrixRanker(serverName string, r *http.Request, in *a
 		}
 		return nil
 	}, func(err error) error {
-		// do this when services are down
+		// do this when services are timeout.
 		if err != nil {
 			logs.Error(err)
 		}
@@ -137,7 +122,6 @@ func (s *rankServer) restHystrixRanker(serverName string, r *http.Request, in *a
 }
 
 func (s *rankServer) restRanker(r *http.Request, in *apis.RecRequest, ServiceConfig *service_config.ServiceConfig) (map[string]interface{}, error) {
-
 	response := make(map[string]interface{}, 0)
 
 	dataId := in.GetDataId()
@@ -153,7 +137,6 @@ func (s *rankServer) restRanker(r *http.Request, in *apis.RecRequest, ServiceCon
 
 	_, ok := apis.NacosListedMap[dataId]
 	if !ok {
-		//注意：需求请求一次才会启动监听，启动空服务是不会监听的
 		err := nacosConn.ServiceConfigListen()
 		if err != nil {
 			return response, err
@@ -162,7 +145,6 @@ func (s *rankServer) restRanker(r *http.Request, in *apis.RecRequest, ServiceCon
 		}
 	}
 
-	//http请求不处理Go2skyOpen状态，grpc和dubbo访问时自己控制
 	ranker := input_format.RankInputFormat{}
 	deepfm, err := ranker.InputCheckAndFormat(in, ServiceConfig)
 	if err != nil {

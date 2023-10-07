@@ -1,27 +1,21 @@
 
 
 {
-	"dataId": "dssm-001",
-	"group": "recengine-model4g",
+	"dataId": "recall-dssm-001",
+	"group": "deepmodel",
 	"namespace": "",
-	
-	"content": {  "_comment":" // from local only include content. whole info from nacos",
+	"content": {  
 		"author": "tester",
-		"update": "2022-10-17 13:30",
-		"version": "v0.8",
+		"update": "2023-10-17 13:30",
 		"desc": "",
-
 		"config": {
-
 			"modelType": "recall",
-
 			"model_conf": {
-
-				"pushprerank": {
+				"rankmodel1": {
 					"fieldsSpec": [{},{},{}],
 					"tfservingGrpcAddr": {
 					    "tfservingModelName": "models",
-					    "addrs": ["10.194.72.5:30172"],
+					    "addrs": ["10.10.10.10:8888"],
 						"pool_size": 50,
 						"initCap":10,
 						"idleTimeoutMs": 100,
@@ -31,16 +25,12 @@
 				    },
 				    "user_sparse_redis_pre": "",
 				    "redis_item_portrait_pre": ""
-
 				}
-
 			},
-
 			"index_conf": {
-
 				"faissGrpcAddr": {
 					"addrs": [
-						"10.194.72.5:30130", "10.194.72.6:30130", "10.194.72.7:30130"
+						"10.10.10.10:8666"
 					],
 					"pool_size": 50,
 					"initCap":10,
@@ -49,28 +39,19 @@
 					"writeTimeoutMs":100,
 					"dialTimeoutS":600
 				},
-
 				"indexInfo":{
-					"discover_short_video_recall_0": {
+					"taobao_shop_000": {
 						"recallNum": 100,
-						"indexName": "discover_short_video_recall_0"
+						"indexName": "taobao_shop_000"
 					}
-
 				}
-
 			},
-
-
 			"redis_conf": {		
-
 				"redisClusterA": {
 					"addrs": [
-						"10.194.144.66:7003",
-						"10.194.144.67:7003",
-						"10.194.144.68:7003",
-						"10.194.144.69:7003",
-						"10.194.144.70:7003",
-						"10.194.144.71:7003"
+						"10.10.10.10:2001",
+						"10.10.10.10:2003",
+						"10.10.10.10:2003"
 					],
 					"password": "",
 					"idleTimeoutMs": 100,
@@ -81,7 +62,6 @@
 					"minIdleConns":50
 				}
 			}
-
 		}
 	}
 }

@@ -16,21 +16,12 @@ import (
 	jsoniter "github.com/json-iterator/go"
 )
 
-// TODO: 传来的参数不固定，且枚举太多，考虑反射.
-
-//TODO:改成类方法，并拆分召回排序
-
-//TODO:1.启动监听nacos配置。2.服务注册到nacos
-
 var lowerRecallNum int
 
 type recallServer struct {
 }
 
 func init() {
-	// lowerRecallNum = *flags.Hystrix_lowerRecallNum
-	// lowerRankNum = *flags.Hystrix_lowerRankNum
-
 	flagFactory := flags.FlagFactory{}
 	flagHystrix := flagFactory.FlagHystrixFactory()
 
@@ -43,26 +34,24 @@ func (c *recallServer) restInferServer(w http.ResponseWriter, r *http.Request) {
 
 	defer func() {
 		if info := recover(); info != nil {
-			logs.Fatal("触发了宕机", info)
+			logs.Fatal("panic", info)
 			rsp := make(map[string]interface{}, 0)
 			rsp["error"] = "fatal"
 			rsp["status"] = "fail"
 			buff, _ := jsoniter.Marshal(rsp)
 			w.Write(buff)
 
-		} else {
-			//fmt.Println("程序正常退出")
-		}
+		} //else {
+		//fmt.Println("")
+		//}
 	}()
 
-	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Millisecond*150)
+	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Millisecond*100)
 	defer cancelFunc()
-
 	r = r.WithContext(ctx)
 
 	rsp := make(map[string]interface{}, 0)
 	rsp["code"] = 200
-
 	err := r.ParseForm()
 	if err != nil {
 		rsp["code"] = 404
@@ -81,16 +70,13 @@ func (c *recallServer) restInferServer(w http.ResponseWriter, r *http.Request) {
 		rsp["message"] = errors.New("emt input data")
 	}
 
-	//TODO:解析r，构造request
+	//INFO: convert http string data to struct data.
 	request, err := httpRequstParse(r)
 	if err != nil {
 		logs.Error(err)
 	}
 
-	//go2sky
 	ServiceConfig := apis.ServiceConfigs[request.GetDataId()]
-
-	//请求服务
 	response, err := c.restHystrixRecaller("restServer", r, &request, ServiceConfig)
 	if err != nil {
 		logs.Error(err)
@@ -103,14 +89,10 @@ func (c *recallServer) restInferServer(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *recallServer) restHystrixRecaller(serverName string, r *http.Request, in *apis.RecRequest, ServiceConfig *service_config.ServiceConfig) (map[string]interface{}, error) {
-
 	response := make(map[string]interface{}, 0)
-
 	hystrix.Do(serverName, func() error {
-
-		// talk to other services
+		// request recall / rank func.
 		response_, err := c.restRecaller(r, in, ServiceConfig)
-
 		if err != nil {
 			logs.Error(err)
 		} else {
@@ -118,10 +100,8 @@ func (c *recallServer) restHystrixRecaller(serverName string, r *http.Request, i
 		}
 
 		return nil
-
 	}, func(err error) error {
-
-		// do this when services are down
+		// do this when services are timeout
 		if err != nil {
 			logs.Error(err)
 		}
@@ -130,7 +110,6 @@ func (c *recallServer) restHystrixRecaller(serverName string, r *http.Request, i
 		in.SetRecallNum(int32(lowerRecallNum))
 		in.SetItemList(itemList[:lowerRankNum])
 		response_, err := c.restRecaller(r, in, ServiceConfig)
-
 		if err != nil {
 			logs.Error(err)
 		} else {
@@ -141,11 +120,9 @@ func (c *recallServer) restHystrixRecaller(serverName string, r *http.Request, i
 	})
 
 	return response, nil
-
 }
 
 func (c *recallServer) restRecaller(r *http.Request, in *apis.RecRequest, ServiceConfig *service_config.ServiceConfig) (map[string]interface{}, error) {
-
 	response := make(map[string]interface{}, 0)
 
 	dataId := in.GetDataId()
@@ -161,7 +138,6 @@ func (c *recallServer) restRecaller(r *http.Request, in *apis.RecRequest, Servic
 
 	_, ok := apis.NacosListedMap[dataId]
 	if !ok {
-		//注意：需求请求一次才会启动监听，启动空服务是不会监听的
 		err := nacosConn.ServiceConfigListen()
 		if err != nil {
 			return response, err
@@ -170,10 +146,7 @@ func (c *recallServer) restRecaller(r *http.Request, in *apis.RecRequest, Servic
 		}
 	}
 
-	//http请求不处理Go2skyOpen状态，grpc和dubbo访问时自己控制
-
 	recaller := input_format.RecallInputFormat{}
-
 	dssm, err := recaller.InputCheckAndFormat(in, ServiceConfig)
 	if err != nil {
 		logs.Error(err)
@@ -182,10 +155,8 @@ func (c *recallServer) restRecaller(r *http.Request, in *apis.RecRequest, Servic
 
 	if skywalkingWeatherOpen {
 		response, err = dssm.RecallInferSkywalking(r)
-
 	} else {
 		response, err = dssm.RecallInferNoSkywalking(r)
-
 	}
 
 	if err != nil {
@@ -194,5 +165,4 @@ func (c *recallServer) restRecaller(r *http.Request, in *apis.RecRequest, Servic
 	}
 
 	return response, nil
-
 }

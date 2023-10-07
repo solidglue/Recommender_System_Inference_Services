@@ -29,7 +29,6 @@ func (b *ServiceConfigBuilder) RedisClientBuilder(domain string, DataId string, 
 
 func (b *ServiceConfigBuilder) FaissClientBuilder(indexConfStr string) *ServiceConfigBuilder {
 	//load redis conf
-
 	faissFactory := faiss.FaissFactory{}
 	faissClient := faissFactory.FaissClientFactory(indexConfStr)
 	b.serviceConfig.setFaissIndexClient(*faissClient)
@@ -39,7 +38,6 @@ func (b *ServiceConfigBuilder) FaissClientBuilder(indexConfStr string) *ServiceC
 
 func (b *ServiceConfigBuilder) ModelClientBuilder(modelConfStr string) *ServiceConfigBuilder {
 	//load redis conf
-
 	modelFactory := model.ModelFactory{}
 	modelClient := modelFactory.ModelClientFactory(modelConfStr)
 	b.serviceConfig.setModelClient(*modelClient)

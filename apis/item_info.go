@@ -1,8 +1,8 @@
 package apis
 
 type ItemInfo struct {
-	itemId string  //节目id
-	score  float32 //分数
+	itemId string
+	score  float32
 }
 
 // itemId

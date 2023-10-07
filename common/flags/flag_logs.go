@@ -5,7 +5,6 @@ import "flag"
 var flagsLogInstance *flagsLog
 
 type flagsLog struct {
-
 	// logs
 	logMaxSize  *int
 	logSaveDays *int

@@ -5,7 +5,6 @@ import "flag"
 var flagCacheInstance *flagCache
 
 type flagCache struct {
-
 	//cache
 	bigcacheShards             *int
 	bigcacheLifeWindowS        *int
