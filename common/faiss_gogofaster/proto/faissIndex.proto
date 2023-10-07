@@ -1,0 +1,51 @@
+syntax = "proto3";
+option go_package = "./;tfserving_go";
+  
+  
+message ItemInfo {     
+    string ItemId = 1;
+    float Score = 2;
+    float Embedding = 3;
+} 
+
+
+message UserVectorInfo {     
+    string UserId = 1;
+    repeated float UserVector = 2;
+}  
+
+
+message RecallRequest {   
+    string IndexName = 1;  
+    UserVectorInfo UserVectorInfo_ = 2;
+	int32 RecallNum = 3;
+} 
+
+
+message RecallResponse {     
+    string UserId = 1;
+    repeated ItemInfo ItemInfo_ = 2;
+}  
+
+ 
+message IndexInfo {     
+    string IndexName = 1;
+    string IndexMd5 = 2;
+    string IndexType = 3;
+    string IndexLoadTime = 4;
+    int32 IndexDim = 5;
+    int32 IndexVectorsSize = 6;
+ }  
+ 
+message GetIndexInfoRequest { 
+}  
+
+message GetIndexInfoResponse {     
+    repeated IndexInfo IndexInfo_ = 1;
+} 
+
+service GrpcRecallServerService {     
+    rpc GrpcRecall(RecallRequest) returns(RecallResponse);
+    rpc GetIndexInfo(GetIndexInfoRequest) returns(GetIndexInfoResponse);
+}   
+ 

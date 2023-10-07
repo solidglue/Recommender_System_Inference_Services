@@ -1,0 +1,147 @@
+package server
+
+import (
+	"fmt"
+	"infer-microservices/common"
+	"infer-microservices/common/flags"
+	"infer-microservices/utils/logs"
+	"net/http"
+	"runtime"
+
+	httpPlugin "github.com/SkyAPM/go2sky/plugins/http"
+)
+
+//TODO: test gin api, test dubbo restful api
+//https://cn.dubbo.apache.org/zh-cn/blog/2021/01/14/dubbo-go-%e4%b8%ad-rest-%e5%8d%8f%e8%ae%ae%e5%ae%9e%e7%8e%b0/
+
+var restListenPort uint
+var maxCpuNum int
+var skywalkingWeatherOpen bool
+var skywalkingIP string
+var skywalkingPort int
+var skywalkingServerName string
+var NacosIP string
+var NacosPort uint64
+
+var restRecallInfer restInferInterface
+var restRankInfer restInferInterface
+
+type WorkFunc func(w http.ResponseWriter, r *http.Request)
+
+type HttpServer struct {
+	ServerIP string
+	Port     uint
+}
+
+func init() {
+
+	// restListenPort = *flags.Rest_server_port
+	// maxCpuNum = *flags.Max_cpu_num
+	// skywalkingWeatherOpen = *flags.Skywalking_whetheropen
+	// skywalkingIP = *flags.Skywalking_ip
+	// skywalkingPort = *flags.Skywalking_port
+	// skywalkingServerName = *flags.Skywalking_servername
+
+	flagFactory := flags.FlagFactory{}
+	flagServiceConfig := flagFactory.FlagServiceConfigFactory()
+	flagSkywalking := flagFactory.FlagSkywalkingFactory()
+
+	restListenPort = *flagServiceConfig.GetServiceRestPort()
+	maxCpuNum = *flagServiceConfig.GetServiceMaxCpuNum()
+	skywalkingWeatherOpen = *flagSkywalking.GetSkywalkingWhetheropen()
+	skywalkingIP = *flagSkywalking.GetSkywalkingIp()
+	skywalkingPort = *flagSkywalking.GetSkywalkingPort()
+	skywalkingServerName = *flagSkywalking.GetSkywalkingServername()
+
+}
+
+func NewHttpServer() *HttpServer {
+	return &HttpServer{}
+}
+
+func (httpsvr *HttpServer) restNoskywalkingServerRunner(path []string, workFunc []WorkFunc) error {
+
+	for idx, p := range path {
+		http.HandleFunc(p, workFunc[idx])
+	}
+
+	cpuNum := runtime.NumCPU()
+	if maxCpuNum <= cpuNum {
+		cpuNum = maxCpuNum
+	}
+
+	runtime.GOMAXPROCS(cpuNum)
+	logs.Debug("cup num:", cpuNum)
+
+	addr := fmt.Sprintf(":%d", restListenPort)
+	err := http.ListenAndServe(addr, nil)
+	if err == nil {
+		logs.Error("server start succ ip:port ", addr)
+		return err
+	}
+
+	return nil
+}
+
+func (httpsvr *HttpServer) restSkywalkingServerRunner(go2skyAddr string, serverName string, path []string, workFunc []WorkFunc) error {
+
+	common.SkywalkingTracer(go2skyAddr, serverName)
+
+	sm, err := httpPlugin.NewServerMiddleware(common.Tracer)
+	if err != nil {
+		logs.Error("create server middleware error %v \n", err)
+	}
+
+	fmt.Println("path:", path)
+	fmt.Println("workFunc:", workFunc)
+
+	route := http.NewServeMux()
+	for idx, p := range path {
+		fmt.Println("p workFunc[]:", p, workFunc[idx])
+		route.HandleFunc(p, workFunc[idx])
+	}
+
+	cpuNum := runtime.NumCPU()
+	if maxCpuNum <= cpuNum {
+		cpuNum = maxCpuNum
+	}
+
+	runtime.GOMAXPROCS(cpuNum)
+	logs.Debug("cup num:", cpuNum)
+
+	addr := fmt.Sprintf(":%d", restListenPort)
+	err = http.ListenAndServe(addr, sm(route))
+	//err := http.ListenAndServe(":8651", sm(route))
+	if err == nil {
+		logs.Error("server start succ ip:port ", err)
+		return nil
+	}
+
+	return nil
+}
+
+func RestServerRunner() {
+
+	paths := []string{
+		"/recall", "/rank",
+	}
+
+	restRecallInfer = &recallServer{}
+	restRankInfer = &rankServer{}
+
+	workFunHandlers := []WorkFunc{
+		restRecallInfer.restInferServer, restRankInfer.restInferServer,
+	}
+
+	httpServer := NewHttpServer()
+
+	if skywalkingWeatherOpen {
+		go2skyAddr := skywalkingIP + ":" + fmt.Sprintf(":%d", skywalkingPort)
+		go httpServer.restSkywalkingServerRunner(go2skyAddr, skywalkingServerName, paths, workFunHandlers)
+	} else {
+		go httpServer.restNoskywalkingServerRunner(paths, workFunHandlers) //需要加go，让其后台执行，否则会一直占用主进程，不执行下边内容
+	}
+	//go server.MultiStart(paths, workFunHandlers)   //需要加go，让其后台执行，否则会一直占用主进程，不执行下边内容
+
+	select {}
+}

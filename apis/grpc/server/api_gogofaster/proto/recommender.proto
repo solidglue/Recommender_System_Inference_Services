@@ -1,0 +1,35 @@
+syntax = "proto3";
+option go_package = "./;server";
+  
+message StringList {     
+    repeated string value = 1;
+} 
+
+message ItemInfo {     
+    string itemid = 1;
+    float score = 2;
+} 
+
+message ItemInfoList {
+     repeated ItemInfo iteminfo_ = 1;
+}
+
+message RecommendRequest {     
+    string DataId = 1;
+	string GroupId = 2;
+	string Namespace = 3;
+	string ModelType = 4; 
+	string UserId = 5; 
+    int32 RecallNum = 6;	
+    StringList ItemList = 7;
+}  
+
+message RecommendResponse {    
+    int32 Code = 1; 
+    string Message = 2;
+    ItemInfoList Data = 3;
+}  
+
+service GrpcRecommendServerService {     
+    rpc GrpcRecommendServer(RecommendRequest) returns(RecommendResponse);
+}  

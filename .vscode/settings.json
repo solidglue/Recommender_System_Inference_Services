@@ -1,0 +1,10 @@
+{
+  
+    "editor.fontSize": 14,
+    "javascript.validate.enable": true,
+    "editor.showUnused": true,
+    "workbench.colorCustomizations": {
+        "editorUnnecessaryCode.border": "#ff0000"
+      },
+      "files.autoSave": "afterDelay"
+}
