@@ -1,24 +1,24 @@
 package apis
 
-type ItemInfo struct {
+type itemInfo struct {
 	itemId string
 	score  float32
 }
 
 // itemId
-func (i *ItemInfo) SetItemId(itemId string) {
+func (i *itemInfo) SetItemId(itemId string) {
 	i.itemId = itemId
 }
 
-func (i *ItemInfo) GetItemId() string {
+func (i *itemInfo) GetItemId() string {
 	return i.itemId
 }
 
 // score
-func (i *ItemInfo) SetScore(score float32) {
+func (i *itemInfo) SetScore(score float32) {
 	i.score = score
 }
 
-func (i *ItemInfo) GetScore() float32 {
+func (i *itemInfo) GetScore() float32 {
 	return i.score
 }
