@@ -39,5 +39,6 @@ The core components of model inference microservices are as follows：
 
 ## Services Deploy
     Docker
+    Kubernetes 
     Nginx
     Apisix
