@@ -3,10 +3,10 @@
 ## Model & Feature
 
 ### Model Training
-    Tensorflow
+    TensorFlow
     
 ### Model Deploy
-    TF Serving
+    TensorFlow Serving
     
 ### Similarity Search
     Faiss(Facebook AI Similarity Search)
