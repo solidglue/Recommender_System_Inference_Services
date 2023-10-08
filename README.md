@@ -11,7 +11,7 @@ The model inference microservices based on deep learning mainly uses the followi
 || TensorFlow Serving | Deploy models and provide a grpc service. |
 ||FAISS | Quick search thousands items from millions items. |
 | Microservices | Nacos | Manage config files and services. |
-|| Dubbogo | Build dubbo protocol RPC services and register them to Nacos. |
+|| Dubbo | Build dubbo protocol RPC services and register them to Nacos. |
 || Hystrix | How to distribute traffic during peak traffic (Latency and Fault Tolerance). |
 || Skywalking | Record the time spent on each request. |
 || Kubernetes  | Manage dockers and monitor the resource consumption of each service, such as memory and CPUs. |
