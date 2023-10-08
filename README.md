@@ -25,7 +25,7 @@ The core components of model inference microservices are as follows：
 | --- | --- | --- |
 | Samples | [Recall Samples](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/blob/master/cores/dssm_samples.go) | Search recall TFRcords format samples from redis cluster, such as dssm model. |
 || [Rank Samples](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/blob/master/cores/deepfm_samples.go) |  Search recall TFRcords format samples from redis cluster, such as deepfm model. |
-| Recall | [Get user/item vector](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/cores/model) | Search user's embedding vector from recall model which deployed by tfservig(grpc sevice) , input data is recall samples. |
+| Recall | [Get embedding vector](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/cores/model) | Search user's embedding vector from recall model which deployed by tfservig(grpc sevice) , input data is recall samples. |
 |  | [Search index](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/cores/faiss) | Quick search thousands items from faiss index (millions items) service(grpc sevice) . |
 | Rank | [Rank](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/blob/master/cores/rank_infer_deepfm.go)  | Rank input items by rank model  which deployed by tfservig(grpc sevice) . |
 | Services | [Config Loader](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/cores/service_config) | Sparse service's start config from Naocs, such as grpc info 、 redis info and index info. |
