@@ -20,7 +20,7 @@ The model inference microservices based on deep learning mainly uses the followi
 
 
 ## Architecture
-
+The core components of model inference microservices are as follows：
 | Type | Component | Description |
 | --- | --- | --- |
 | Samples | [Recall Samples](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/blob/master/cores/dssm_samples.go) | Search recall TFRcords format samples from redis cluster, such as dssm model. |
@@ -37,8 +37,7 @@ The model inference microservices based on deep learning mainly uses the followi
 
 
 
-## Service Deploy
+## Services Deploy
     Docker
-
-
-    
+    Nginx
+    Apisix
