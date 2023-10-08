@@ -31,7 +31,7 @@ The core components of model inference microservices are as follows：
 | Services | [Config Loader](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/cores/service_config) | Sparse service's start config from Naocs, such as grpc info 、 redis info and index info. |
 |  | [Register Services](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/blob/master/apis/dubbo/server/dubbo_server.go) | Register services to Nacos. |
 |  | [Update Services](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/cores/nacos_config) | Update services when nacos config files have changed, such as grpc info 、 redis info or index info. |
-|APIS| [Dubbo](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/apis/dubbo) |Provide Dubbo protocol APIs. |
+|APIs| [Dubbo](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/apis/dubbo) |Provide Dubbo protocol APIs. |
 || [gRPC](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/apis/grpc) |Provide gRPC protocol APIs. |
 || [REST](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/apis/rest) |Provide Http protocol APIs. |
 
