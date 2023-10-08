@@ -5,25 +5,25 @@
 ### Model Training
     Tensorflow
     
-### Model deploy
-    TFserving
+### Model Deploy
+    TF Serving
     
 ### Similarity Search
     Faiss(Facebook AI Similarity Search)
     
-### Feature database
+### Feature Database
     Redis
 
 
 ## Microservices
 
-### Service register center / config center
+### Service Register Center / Config Center
     Nacosgo
 
-###  Service framework   
+###  Service Framework   
     Dubbogo
 
-###  Latency and fault tolerance
+###  Latency and Fault Tolerance
     Netflix Hystrix 
 
 ### Service Monitor
@@ -31,8 +31,11 @@
 
 ### APIS
     Dubbo
-    Grpc
+    GRPC
     RESTful
+
+### Service Deploy
+    Docker
 
 
     
