@@ -1,40 +1,44 @@
-# DeepLearning Based Recommender Systems Infer Microsevices.
+# Introduce
+    DeepLearning Based Recommender Systems Infer Microsevices for Golang.
 
-## Model & Feature
+# Model & Feature
 
-### Model Training
+## Model Training
     TensorFlow
     
-### Model Deploy
+## Model Deploy
     TensorFlow Serving
     
-### Similarity Search
+## Similarity Search
     Faiss(Facebook AI Similarity Search)
     
-### Feature Database
+## Feature Database
     Redis
 
 
-## Microservices
+# Microservices
 
-### Service Register Center / Config Center
+## Service Register Center / Config Center
     Nacosgo
 
-###  Service Framework   
+##  Service Framework   
     Dubbogo
 
-###  Latency and Fault Tolerance
+##  Latency and Fault Tolerance
     Netflix Hystrix 
 
-### Service Monitor
-    Skywalking
+## Service Monitor
+    Skywalking、K8s
 
-### APIS
+## API gateway
+    Nginx、Apisix
+
+## APIS
     Dubbo
     GRPC
     RESTful
 
-### Service Deploy
+## Service Deploy
     Docker
 
 
