@@ -1,4 +1,4 @@
-package cores
+package deepfm
 
 import (
 	"encoding/json"
@@ -24,13 +24,13 @@ type DeepFM struct {
 
 func init() {
 	bigCacheConfRankResult = bigcache.Config{
-		Shards:             shards,
-		LifeWindow:         lifeWindowS * time.Minute,
-		CleanWindow:        cleanWindowS * time.Minute,
-		MaxEntriesInWindow: maxEntriesInWindow,
-		MaxEntrySize:       maxEntrySize,
-		Verbose:            verbose,
-		HardMaxCacheSize:   hardMaxCacheSize,
+		Shards:             shards1,
+		LifeWindow:         lifeWindowS1 * time.Minute,
+		CleanWindow:        cleanWindowS1 * time.Minute,
+		MaxEntriesInWindow: maxEntriesInWindow1,
+		MaxEntrySize:       maxEntrySize1,
+		Verbose:            verbose1,
+		HardMaxCacheSize:   hardMaxCacheSize1,
 		OnRemove:           nil,
 		OnRemoveWithReason: nil,
 	}
@@ -76,7 +76,7 @@ func (d *DeepFM) RankInferSkywalking(r *http.Request) (map[string]interface{}, e
 	}
 
 	// get features from cache.
-	if lifeWindowS > 0 {
+	if lifeWindowS1 > 0 {
 		exampleDataBytes, _ := bigCache.Get(cacheKeyPrefix)
 		err = json.Unmarshal(exampleDataBytes, &response)
 		if err != nil {
@@ -143,7 +143,7 @@ func (d *DeepFM) RankInferSkywalking(r *http.Request) (map[string]interface{}, e
 	spanUnionEmOut.End()
 
 	response["data"] = *rankRst
-	if lifeWindowS > 0 {
+	if lifeWindowS1 > 0 {
 		bigCache.Set(cacheKeyPrefix, []byte(utils.Struct2Json(response)))
 	}
 
@@ -162,7 +162,7 @@ func (d *DeepFM) RankInferNoSkywalking(r *http.Request) (map[string]interface{},
 	}
 
 	// get features from cache.
-	if lifeWindowS > 0 {
+	if lifeWindowS1 > 0 {
 		exampleDataBytes, _ := bigCache.Get(cacheKeyPrefix)
 		err = json.Unmarshal(exampleDataBytes, &response)
 		if err != nil {
@@ -208,7 +208,7 @@ func (d *DeepFM) RankInferNoSkywalking(r *http.Request) (map[string]interface{},
 
 	response["data"] = *rankRst
 
-	if lifeWindowS > 0 {
+	if lifeWindowS1 > 0 {
 		bigCache.Set(cacheKeyPrefix, []byte(utils.Struct2Json(response)))
 	}
 

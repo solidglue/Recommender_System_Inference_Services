@@ -1,4 +1,4 @@
-package cores
+package dssm
 
 import (
 	"encoding/json"

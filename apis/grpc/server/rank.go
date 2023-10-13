@@ -4,7 +4,7 @@ package server
 
 import (
 	grpc_api "infer-microservices/apis/grpc/server/api_gogofaster"
-	"infer-microservices/cores"
+	"infer-microservices/cores/model/deepfm"
 	"infer-microservices/utils/logs"
 	"sync"
 	"time"
@@ -17,7 +17,7 @@ import (
 var rankWg sync.WaitGroup
 
 type rankServer struct {
-	deepfm cores.DeepFM
+	deepfmm deepfm.DeepFM
 }
 
 func (r *rankServer) grpcInferServer() (*grpc_api.RecommendResponse, error) {
@@ -37,9 +37,9 @@ func (r *rankServer) grpcInferServer() (*grpc_api.RecommendResponse, error) {
 			var response map[string]interface{}
 			var err error
 			if skywalkingWeatherOpen {
-				response, err = r.deepfm.RankInferSkywalking(nil)
+				response, err = r.deepfmm.RankInferSkywalking(nil)
 			} else {
-				response, err = r.deepfm.RankInferNoSkywalking(nil)
+				response, err = r.deepfmm.RankInferNoSkywalking(nil)
 			}
 
 			if err != nil {

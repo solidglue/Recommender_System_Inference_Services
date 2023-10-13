@@ -1,7 +1,7 @@
 package server
 
 import (
-	"infer-microservices/cores"
+	"infer-microservices/cores/model/dssm"
 	"sync"
 	"time"
 
@@ -16,7 +16,7 @@ import (
 var recallWg sync.WaitGroup
 
 type recallServer struct {
-	dssm cores.Dssm
+	dssmm dssm.Dssm
 }
 
 func (r *recallServer) grpcInferServer() (*grpc_api.RecommendResponse, error) {
@@ -36,9 +36,9 @@ func (r *recallServer) grpcInferServer() (*grpc_api.RecommendResponse, error) {
 			var response map[string]interface{}
 			var err error
 			if skywalkingWeatherOpen {
-				response, err = r.dssm.RecallInferSkywalking(nil)
+				response, err = r.dssmm.RecallInferSkywalking(nil)
 			} else {
-				response, err = r.dssm.RecallInferNoSkywalking(nil)
+				response, err = r.dssmm.RecallInferNoSkywalking(nil)
 			}
 			if err != nil {
 				logs.Error("request tfserving fail:", resp_info)

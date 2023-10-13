@@ -1,4 +1,4 @@
-package cores
+package deepfm
 
 import (
 	"encoding/json"
@@ -17,6 +17,7 @@ var maxEntrySize1 int
 var maxEntriesInWindow1 int
 var verbose1 bool
 var shards1 int
+var bigCacheConfRankSamples bigcache.Config
 
 func init() {
 	flagFactory := flags.FlagFactory{}
@@ -60,7 +61,7 @@ func (d *DeepFM) getInferExampleFeatures() (common.ExampleFeatures, error) {
 	}
 
 	// if hit cache.
-	if lifeWindowS > 0 {
+	if lifeWindowS1 > 0 {
 		exampleDataBytes, _ := bigCache.Get(cacheKeyPrefix)
 		err = json.Unmarshal(exampleDataBytes, &exampleData)
 		if err != nil {
@@ -93,7 +94,7 @@ func (d *DeepFM) getInferExampleFeatures() (common.ExampleFeatures, error) {
 		ItemSeqExampleFeatures:     &itemExampleFeaturesList,
 	}
 
-	if lifeWindowS > 0 {
+	if lifeWindowS1 > 0 {
 		bigCache.Set(cacheKeyPrefix, []byte(utils.Struct2Json(exampleData)))
 	}
 

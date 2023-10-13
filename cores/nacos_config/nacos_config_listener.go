@@ -3,7 +3,6 @@ package nacos_config
 import (
 	"infer-microservices/apis"
 	"infer-microservices/common/flags"
-	"infer-microservices/cores"
 	"infer-microservices/cores/service_config"
 	"infer-microservices/utils/logs"
 	"sync"
@@ -163,7 +162,7 @@ func (n *NacosConnConfig) ServiceConfigUpdate(dataId string, content string) err
 	mt.Lock()
 	defer mt.Unlock()
 
-	director := cores.ServiceConfigDirector{}
+	director := service_config.ServiceConfigDirector{}
 	NacosContent := NacosContent{}
 	domain, redisConfStr, modelConfStr, indexConfStr := NacosContent.InputServiceConfigParse(content)
 

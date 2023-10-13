@@ -2,7 +2,7 @@ package server
 
 import (
 	"infer-microservices/apis"
-	"infer-microservices/cores"
+	"infer-microservices/cores/model/deepfm"
 	"infer-microservices/utils"
 	"sync"
 
@@ -12,7 +12,7 @@ import (
 var rankWg sync.WaitGroup
 
 type rankServer struct {
-	deepfm cores.DeepFM
+	deepfmm deepfm.DeepFM
 }
 
 func (r *rankServer) dubboInferServer() (*apis.RecResponse, error) {
@@ -21,7 +21,7 @@ func (r *rankServer) dubboInferServer() (*apis.RecResponse, error) {
 
 	//close go2sky in dubbo service .
 	//TODO: get go2sky config from config file.
-	result, err := r.deepfm.RankInferNoSkywalking(nil)
+	result, err := r.deepfmm.RankInferNoSkywalking(nil)
 	if err != nil {
 		return &response, err
 	}

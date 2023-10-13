@@ -2,7 +2,7 @@ package server
 
 import (
 	"infer-microservices/apis"
-	"infer-microservices/cores"
+	"infer-microservices/cores/model/dssm"
 	"infer-microservices/utils"
 	"sync"
 
@@ -12,7 +12,7 @@ import (
 var recallWg sync.WaitGroup
 
 type recallServer struct {
-	dssm cores.Dssm
+	dssmm dssm.Dssm
 }
 
 func (d *recallServer) dubboInferServer() (*apis.RecResponse, error) {
@@ -21,7 +21,7 @@ func (d *recallServer) dubboInferServer() (*apis.RecResponse, error) {
 
 	//close go2sky in dubbo service .
 	//TODO: get go2sky config from config file.
-	result, err := d.dssm.RecallInferNoSkywalking(nil)
+	result, err := d.dssmm.RecallInferNoSkywalking(nil)
 	if err != nil {
 		return &response, err
 	}

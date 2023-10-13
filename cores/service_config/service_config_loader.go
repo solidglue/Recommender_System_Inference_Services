@@ -4,7 +4,7 @@ import (
 	"infer-microservices/common/flags"
 	"infer-microservices/cores/faiss"
 	"infer-microservices/cores/model"
-	"infer-microservices/cores/redis_config"
+	"infer-microservices/cores/service_config/redis_config"
 )
 
 var serviceConfFile string
