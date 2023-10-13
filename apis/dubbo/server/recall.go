@@ -20,6 +20,7 @@ func (d *recallServer) dubboInferServer() (*apis.RecResponse, error) {
 	response.SetCode(404)
 
 	//close go2sky in dubbo service .
+	//TODO: get go2sky config from config file.
 	result, err := d.dssm.RecallInferNoSkywalking(nil)
 	if err != nil {
 		return &response, err
@@ -33,7 +34,7 @@ func (d *recallServer) dubboInferServer() (*apis.RecResponse, error) {
 	if len(resultList) > 0 {
 		for i := 0; i < len(resultList); i++ {
 			recallWg.Add(1)
-			go fmtRecallResponse(resultList[i], recallCh)
+			go formatRecallResponse(resultList[i], recallCh)
 		}
 
 		recallWg.Wait()
@@ -50,7 +51,7 @@ func (d *recallServer) dubboInferServer() (*apis.RecResponse, error) {
 	return &response, err
 }
 
-func fmtRecallResponse(itemScore map[string]interface{}, recallCh chan string) {
+func formatRecallResponse(itemScore map[string]interface{}, recallCh chan string) {
 	defer recallWg.Done()
 
 	itemId := itemScore["itemid"].(string)

@@ -12,14 +12,14 @@ import (
 )
 
 func requestDubboService() {
-	itemList := []string{"7000000", "7000001", "7000002", "7000003"}
+	itemList := []string{"80000001", "80000002", "80000003", "80000004"}
 
 	req := apis.RecRequest{}
-	req.SetDataId("dataid|groupid") //nacos dataid|groupid
-	req.SetUserId("real userid")    //userid
-	req.SetItemList(itemList)       //rank items
+	req.SetDataId("$dataid|$groupid") //nacos dataid|groupid
+	req.SetUserId("$userid")          //userid
+	req.SetItemList(itemList)         //rank items
 
-	// request dubbo infer service
+	// request dubbo infer service. use to test serivce.
 	rsp, err := api.DubbogoInferServiceClient.DubboRecommendServer(context.TODO(), &req)
 	if err != nil {
 		logs.Error(err)
@@ -30,7 +30,7 @@ func requestDubboService() {
 	}
 }
 
-// TODO: change 2 unit test.
+// TODO: change to unit test.
 func main() {
 	// export DUBBO_GO_CONFIG_PATH=dubbogo.yml or load it in code.
 	if err := config.Load(config.WithPath("conf/dubbogo_client.yml")); err != nil {

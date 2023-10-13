@@ -21,8 +21,8 @@ func init() {
 }
 
 type DubbogoInferService struct {
-	// define func name.
-	DubboRecommendServer func(ctx context.Context, req *apis.RecRequest) (*apis.RecResponse, error) //`dubbo:"getUser"`
+	// define service func name.
+	DubboRecommendServer func(ctx context.Context, req *apis.RecRequest) (*apis.RecResponse, error)
 }
 
 // refer : https://www.w3cschool.cn/dubbo/languages-golang-dubbo-go-30-quickstart-quickstart_dubbo.html

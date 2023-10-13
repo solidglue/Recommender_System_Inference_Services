@@ -117,7 +117,6 @@ func (g *grpcRecommender) grpcRecommenderServerContext(ctx context.Context, in *
 		err := nacosConn.ServiceConfigListen()
 		if err != nil {
 			panic(err)
-			return
 		} else {
 			apis.NacosListedMap[dataId] = true
 		}
@@ -127,7 +126,6 @@ func (g *grpcRecommender) grpcRecommenderServerContext(ctx context.Context, in *
 	if err != nil {
 		resp_info.Message = fmt.Sprintf("%s", err)
 		panic(err)
-		return
 	} else {
 		resp_info = response_
 	}

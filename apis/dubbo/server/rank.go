@@ -20,6 +20,7 @@ func (r *rankServer) dubboInferServer() (*apis.RecResponse, error) {
 	response.SetCode(404)
 
 	//close go2sky in dubbo service .
+	//TODO: get go2sky config from config file.
 	result, err := r.deepfm.RankInferNoSkywalking(nil)
 	if err != nil {
 		return &response, err
@@ -32,7 +33,7 @@ func (r *rankServer) dubboInferServer() (*apis.RecResponse, error) {
 	if len(resultList) > 0 {
 		for i := 0; i < len(resultList); i++ {
 			rankWg.Add(1)
-			go fmtRankResponse(resultList[i], rankCh)
+			go formatRankResponse(resultList[i], rankCh)
 		}
 
 		rankWg.Wait()
@@ -49,7 +50,7 @@ func (r *rankServer) dubboInferServer() (*apis.RecResponse, error) {
 	return &response, err
 }
 
-func fmtRankResponse(itemScore map[string]interface{}, rankCh chan string) {
+func formatRankResponse(itemScore map[string]interface{}, rankCh chan string) {
 	defer rankWg.Done()
 
 	itemId := itemScore["itemid"].(string)
