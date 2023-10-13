@@ -34,7 +34,7 @@ func (s *FlagServiceStartInfo) GetServiceConfigFile() *string {
 
 // rest_server_port
 func (s *FlagServiceStartInfo) setServiceRestPort() {
-	conf := flag.Uint("rest_server_port", 20000, "")
+	conf := flag.Uint("rest_server_port", 8888, "")
 	s.restPort = conf
 }
 
@@ -44,7 +44,7 @@ func (s *FlagServiceStartInfo) GetServiceRestPort() *uint {
 
 // grpc_server_port
 func (s *FlagServiceStartInfo) setServiceGrpcPort() {
-	conf := flag.Uint("grpc_server_port", 21000, "")
+	conf := flag.Uint("grpc_server_port", 8889, "")
 	s.grpcPort = conf
 }
 

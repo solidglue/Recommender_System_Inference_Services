@@ -1,0 +1,1 @@
+# Stable or universal parameter configurations are here,Flexible or business related parameters placed in nacos
