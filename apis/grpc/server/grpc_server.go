@@ -6,6 +6,7 @@ import (
 	"infer-microservices/common/flags"
 	"infer-microservices/cores/nacos_config"
 	"infer-microservices/cores/service_config"
+	"strings"
 	"time"
 
 	"infer-microservices/apis"
@@ -49,7 +50,6 @@ func init() {
 
 // INFO: implement grpc func which defined by proto.
 func (g *grpcRecommender) GrpcRecommendServer(ctx context.Context, in *grpc_api.RecommendRequest) (*grpc_api.RecommendResponse, error) {
-
 	//INFO: set timeout by context, degraded service by hystix.
 	resp_info := &grpc_api.RecommendResponse{
 		Code: 404,
@@ -76,12 +76,35 @@ func (g *grpcRecommender) GrpcRecommendServer(ctx context.Context, in *grpc_api.
 	}
 }
 
+func getGrpcRequestParams(in *grpc_api.RecommendRequest) apis.RecRequest {
+	request := apis.RecRequest{}
+	request.SetDataId(in.GetDataId())
+	request.SetGroupId(in.GetGroupId())
+	request.SetNamespaceId(in.GetNamespace())
+	request.SetUserId(in.UserId)
+	request.SetRecallNum(in.RecallNum)
+	request.SetItemList(in.ItemList.Value)
+
+	return request
+}
+
+func getNacosConn(in *grpc_api.RecommendRequest) nacos_config.NacosConnConfig {
+	//nacos listen need follow parms.
+	nacosConn := nacos_config.NacosConnConfig{}
+	nacosConn.SetDataId(in.GetDataId())
+	nacosConn.SetGroupId(in.GetGroupId())
+	nacosConn.SetNamespaceId(in.GetNamespace())
+	nacosConn.SetIp(ipAddr_)
+	nacosConn.SetPort(port_)
+
+	return nacosConn
+}
+
 func (g *grpcRecommender) grpcRecommenderServerContext(ctx context.Context, in *grpc_api.RecommendRequest, respCh chan *grpc_api.RecommendResponse) {
 
 	defer func() {
 		if info := recover(); info != nil {
 			fmt.Println("panic", info)
-
 		} //else {
 		//fmt.Println("")
 		//}
@@ -91,37 +114,20 @@ func (g *grpcRecommender) grpcRecommenderServerContext(ctx context.Context, in *
 		Code: 404,
 	}
 
-	dataId := in.DataId
-	groupId := in.GroupId
-	namespaceId := in.Namespace
-
-	request := apis.RecRequest{}
-	request.SetDataId(dataId)
-	request.SetGroupId(groupId)
-	request.SetNamespaceId(namespaceId)
-	request.SetUserId(in.UserId)
-	request.SetRecallNum(in.RecallNum)
-	request.SetItemList(in.ItemList.Value)
-
+	nacosConn := getNacosConn(in)
+	dataId := in.GetDataId()
 	ServiceConfig := apis.ServiceConfigs[dataId]
-
-	nacosConn := nacos_config.NacosConnConfig{}
-	nacosConn.SetDataId(dataId)
-	nacosConn.SetGroupId(groupId)
-	nacosConn.SetNamespaceId(namespaceId)
-	nacosConn.SetIp(ipAddr_)
-	nacosConn.SetPort(port_)
-
 	_, ok := apis.NacosListedMap[dataId]
 	if !ok {
 		err := nacosConn.ServiceConfigListen()
 		if err != nil {
+			logs.Error(err)
 			panic(err)
 		} else {
 			apis.NacosListedMap[dataId] = true
 		}
 	}
-
+	request := getGrpcRequestParams(in)
 	response_, err := g.grpcHystrixServer("grpcServer", &request, ServiceConfig)
 	if err != nil {
 		resp_info.Message = fmt.Sprintf("%s", err)
@@ -142,6 +148,7 @@ func (r *grpcRecommender) grpcHystrixServer(serverName string, in *apis.RecReque
 		response_, err := r.grpcRecommender(in, ServiceConfig)
 		if err != nil {
 			logs.Error(err)
+			return err
 		} else {
 			resp_info = response_
 		}
@@ -151,6 +158,7 @@ func (r *grpcRecommender) grpcHystrixServer(serverName string, in *apis.RecReque
 		// do this when services are timeout.
 		if err != nil {
 			logs.Error(err)
+			return err
 		}
 
 		itemList := in.GetItemList()
@@ -160,6 +168,7 @@ func (r *grpcRecommender) grpcHystrixServer(serverName string, in *apis.RecReque
 
 		if err != nil {
 			logs.Error(err)
+			return err
 		} else {
 			resp_info = response_
 		}
@@ -179,7 +188,7 @@ func (g *grpcRecommender) grpcRecommender(in *apis.RecRequest, ServiceConfig *se
 	recaller := input_format.RecallInputFormat{}
 	ranker := input_format.RankInputFormat{}
 	modelType := in.GetModelType()
-	if modelType == "recall" {
+	if strings.ToLower(modelType) == "recall" {
 		dssm, err := recaller.InputCheckAndFormat(&request, ServiceConfig)
 		if err != nil {
 			logs.Error(err)
@@ -191,7 +200,7 @@ func (g *grpcRecommender) grpcRecommender(in *apis.RecRequest, ServiceConfig *se
 			logs.Error(err)
 			return nil, err
 		}
-	} else if modelType == "rank" {
+	} else if strings.ToLower(modelType) == "rank" {
 		deepfm, err := ranker.InputCheckAndFormat(&request, ServiceConfig)
 		if err != nil {
 			logs.Error(err)
@@ -219,15 +228,15 @@ func GrpcServerRunner(nacosIp string, nacosPort uint64) error {
 		cpuNum = maxCpuNum
 	}
 	runtime.GOMAXPROCS(cpuNum)
-	logs.Debug("cup num:", cpuNum)
+	logs.Info("cup num:", cpuNum)
 
 	addr := fmt.Sprintf(":%d", grpcListenPort)
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		logs.Fatal("failed to listen: %v", err)
+		panic(err)
 	} else {
-		logs.Debug("listen to port:", addr)
-
+		logs.Info("listen to port:", addr)
 	}
 
 	s := grpc.NewServer()

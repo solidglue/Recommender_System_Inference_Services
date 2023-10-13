@@ -11,6 +11,8 @@ import (
 	_ "dubbo.apache.org/dubbo-go/v3/imports"
 )
 
+//INFO:use to test serivce.
+
 func requestDubboService() {
 	itemList := []string{"80000001", "80000002", "80000003", "80000004"}
 

@@ -12,6 +12,8 @@ import (
 	"golang.org/x/net/context"
 )
 
+// INFO: GO goroutine recall and rank
+
 var rankWg sync.WaitGroup
 
 type rankServer struct {
@@ -50,7 +52,7 @@ func (r *rankServer) grpcInferServer() (*grpc_api.RecommendResponse, error) {
 			rankCh := make(chan *grpc_api.ItemInfo, len(resultList))
 			for i := 0; i < len(resultList); i++ {
 				rankWg.Add(1)
-				go fmtRankResponse(resultList[i], rankCh)
+				go formatRankResponse(resultList[i], rankCh)
 			}
 
 			rankWg.Wait()
@@ -72,7 +74,7 @@ func (r *rankServer) grpcInferServer() (*grpc_api.RecommendResponse, error) {
 	}
 }
 
-func fmtRankResponse(itemScore map[string]interface{}, rankCh chan *grpc_api.ItemInfo) {
+func formatRankResponse(itemScore map[string]interface{}, rankCh chan *grpc_api.ItemInfo) {
 	defer rankWg.Done()
 
 	itemid := itemScore["itemid"].(string)

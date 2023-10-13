@@ -9,9 +9,12 @@ import (
 	"google.golang.org/grpc"
 )
 
+//INFO:use to test serivce.
+
 const (
 	// gRPC addrs.
-	Address = "10.194.140.50:8221"
+	//TODO: //TODO: get  config from config file.
+	Address = "10.10.10.10:8888"
 )
 
 func requestGrpcService() {
@@ -21,23 +24,22 @@ func requestGrpcService() {
 	}
 	defer conn.Close()
 
-	itemList := []string{"7000000", "7000001", "7000002", "7000003"}
+	itemList := []string{"80000002", "80000002", "80000003", "80000004"}
 	req := &grpc_server.RecommendRequest{
-		UserId: "real userid",
-		//ItemList: &grpc_server.StringList{itemid_list},
+		UserId:   "$userid",
 		ItemList: &grpc_server.StringList{Value: itemList},
 	}
 
-	fmt.Println("REQUEST:", req)
+	fmt.Println("request:", req)
 	client := grpc_server.NewGrpcRecommendServerServiceClient(conn)
 	res, err := client.GrpcRecommendServer(context.Background(), req)
 	if err != nil {
 		logs.Error("GRPC request failed")
 	}
-	fmt.Println("RESPONSE:", res)
+	fmt.Println("response:", res)
 }
 
-// TODO: change 2 unit test.
+// TODO: change to unit test.
 func main() {
 	requestGrpcService()
 }
