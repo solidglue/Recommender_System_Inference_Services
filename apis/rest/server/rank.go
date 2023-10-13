@@ -57,31 +57,37 @@ func (s *rankServer) restInferServer(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
 		rsp["code"] = 404
-		rsp["message"] = err.Error()
+		rsp["error"] = errors.New("ParseForm Error")
+		panic(err)
 	}
 
 	method := r.Method
 	if method != "POST" {
 		rsp["code"] = 404
-		rsp["message"] = err.Error()
+		rsp["error"] = errors.New("method should be POST")
+		panic(err)
+
 	}
 
 	data := r.Form["data"]
 	if len(data) == 0 {
 		rsp["code"] = 404
-		rsp["message"] = errors.New("emt input data")
+		rsp["error"] = errors.New("emt input data")
+		panic(err)
 	}
 
 	//INFO: convert http string data to struct data.
 	request, err := httpRequstParse(r)
 	if err != nil {
 		logs.Error(err)
+		panic(err)
 	}
 
 	ServiceConfig := apis.ServiceConfigs[request.GetDataId()]
 	response, err := s.restHystrixRanker("restServer", r, &request, ServiceConfig)
 	if err != nil {
 		logs.Error(err)
+		panic(err)
 	} else {
 		rsp["data"] = response
 	}

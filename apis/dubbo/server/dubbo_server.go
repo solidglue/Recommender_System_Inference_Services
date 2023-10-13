@@ -141,6 +141,7 @@ func (r *DubbogoInferService) dubboHystrixServer(serverName string, in *apis.Rec
 		//INFO: do this when services are timeout (hystrix timeout).
 		if err != nil {
 			logs.Error(err)
+			panic(err)
 		}
 
 		itemList := in.GetItemList()
@@ -150,6 +151,7 @@ func (r *DubbogoInferService) dubboHystrixServer(serverName string, in *apis.Rec
 
 		if err != nil {
 			logs.Error(err)
+			panic(err)
 		} else {
 			response = response_
 		}
