@@ -35,10 +35,10 @@ The core components of model inference microservices are as follows：
 |API| [Dubbo](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/apis/dubbo) |Provide Dubbo protocol APIs. |
 || [gRPC](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/apis/grpc) |Provide gRPC protocol APIs. |
 || [REST](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/apis/rest) |Provide Http protocol APIs. |
-|Web| [Web]([https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/apis/dubbo](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/web)) |Services manage and Service monitor page. |
-|Deploy| [Faiss]([https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/apis/dubbo](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/deploy/faiss)) |Faiss index service deploy. |
-|| [TFServing]([https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/apis/grpc](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/deploy/tfserving)) |Tensorflow model deploy. |
-|| [Infer]([https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/apis/rest](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/deploy/infer)) |Recommend System infer deploy. |
+|Web| [Web](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/web) |Services manage and Service monitor page. |
+|Deploy| [Faiss](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/deploy/faiss) |Faiss index service deploy. |
+|| [TFServing](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/deploy/tfserving) |Tensorflow model deploy. |
+|| [Infer](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/deploy/infer) |Recommend System infer deploy. |
 
 
 
