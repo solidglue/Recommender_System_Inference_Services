@@ -36,7 +36,7 @@ func (s *flagsHystrix) GetHystrixTimeoutMs() *int {
 
 // hystrix_MaxConcurrentRequests
 func (s *flagsHystrix) setHystrixMaxConcurrentRequests() {
-	conf := flag.Int("hystrix_timeoutMS", 100, "")
+	conf := flag.Int("hystrix_timeoutMS", 10000, "")
 	s.hystrixMaxConcurrentRequests = conf
 }
 
@@ -56,7 +56,7 @@ func (s *flagsHystrix) GetHystrixRequestVolumeThreshold() *int {
 
 // hystrix_timeoutMS
 func (s *flagsHystrix) setHystrixSleepWindow() {
-	conf := flag.Int("hystrix_SleepWindow", 120000, "")
+	conf := flag.Int("hystrix_SleepWindow", 10000, "")
 	s.hystrixSleepWindow = conf
 }
 
@@ -86,7 +86,7 @@ func (s *flagsHystrix) GetHystrixLowerRecallNum() *int {
 
 // hystrix_lowerRankNum
 func (s *flagsHystrix) setHystrixLowerRankNum() {
-	conf := flag.Int("hystrix_lowerRankNum", 20, "")
+	conf := flag.Int("hystrix_lowerRankNum", 100, "")
 	s.hystrixLowerRankNum = conf
 }
 
