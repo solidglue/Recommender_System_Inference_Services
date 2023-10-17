@@ -1,9 +1,8 @@
 package redis_config
 
 import (
-	redis_helper "infer-microservices/common/redis"
-	redis_v8 "infer-microservices/common/redis"
 	"infer-microservices/utils"
+	redis_v8 "infer-microservices/utils/redis"
 )
 
 var RedisClientInstance *RedisClient
@@ -45,7 +44,7 @@ func (r *RedisClient) ConfigLoad(domain string, dataId string, redisConfStr stri
 
 	confMap := utils.Json2Map(redisConfStr)
 	redisClusterInfo := confMap["redisCluster"].(map[string]interface{})
-	redisConnPool := redis_helper.NewRedisClusterClient(redisClusterInfo)
+	redisConnPool := redis_v8.NewRedisClusterClient(redisClusterInfo)
 
 	r.setRedisDomain(domain)
 	r.setRedisPool(redisConnPool)

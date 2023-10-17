@@ -1,7 +1,6 @@
 package faiss
 
 import (
-	"infer-microservices/common"
 	faiss_index "infer-microservices/common/faiss_gogofaster"
 	"infer-microservices/common/flags"
 	"infer-microservices/utils"
@@ -12,7 +11,7 @@ var grpcTimeout int64
 
 type FaissIndexClient struct {
 	indexName     string                     //index name.
-	faissGrpcPool *common.GRPCPool           //faiss  grpc pool.
+	faissGrpcPool *utils.GRPCPool            //faiss  grpc pool.
 	faissIndexs   *faiss_index.RecallRequest // faiss index.
 }
 
@@ -33,11 +32,11 @@ func (f *FaissIndexClient) GetIndexName() string {
 }
 
 // grpc pool
-func (f *FaissIndexClient) setFaissGrpcPool(faissGrpcPool *common.GRPCPool) {
+func (f *FaissIndexClient) setFaissGrpcPool(faissGrpcPool *utils.GRPCPool) {
 	f.faissGrpcPool = faissGrpcPool
 }
 
-func (f *FaissIndexClient) GetFaissGrpcPool() *common.GRPCPool {
+func (f *FaissIndexClient) GetFaissGrpcPool() *utils.GRPCPool {
 	return f.faissGrpcPool
 }
 
@@ -56,7 +55,7 @@ func (f *FaissIndexClient) ConfigLoad(domain string, dataId string, indexConfStr
 
 	// create faiss grpc pool
 	faissGrpcConf := dataConf["faissGrpcAddr"].(map[string]interface{})
-	faissGrpcPool, err := common.CreateGrpcConn(faissGrpcConf)
+	faissGrpcPool, err := utils.CreateGrpcConn(faissGrpcConf)
 	if err != nil {
 		return err
 	}

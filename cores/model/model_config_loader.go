@@ -1,7 +1,6 @@
 package model
 
 import (
-	"infer-microservices/common"
 	"infer-microservices/common/flags"
 	"infer-microservices/utils"
 )
@@ -13,7 +12,7 @@ var modelClientInstance *ModelClient
 type ModelClient struct {
 	modelName          string                 //model name.
 	tfservingModelName string                 //model name of tfserving config list.
-	tfservingGrpcPool  *common.GRPCPool       //tfserving grpc pool.
+	tfservingGrpcPool  *utils.GRPCPool        //tfserving grpc pool.
 	fieldsSpec         map[string]interface{} //feaure engine conf.
 	userRedisKeyPre    string                 //user feature redis key pre.
 	itemRedisKeyPre    string                 //item feature redis key pre.
@@ -46,11 +45,11 @@ func (f *ModelClient) GetTfservingModelName() string {
 }
 
 // tfservingGrpcPool
-func (f *ModelClient) setTfservingGrpcPool(tfservingGrpcPool *common.GRPCPool) {
+func (f *ModelClient) setTfservingGrpcPool(tfservingGrpcPool *utils.GRPCPool) {
 	f.tfservingGrpcPool = tfservingGrpcPool
 }
 
-func (f *ModelClient) GetTfservingGrpcPool() *common.GRPCPool {
+func (f *ModelClient) GetTfservingGrpcPool() *utils.GRPCPool {
 	return f.tfservingGrpcPool
 }
 
@@ -83,7 +82,7 @@ func (m *ModelClient) ConfigLoad(domain string, dataId string, modelConfStr stri
 		modelName := tfservingGrpcConf["tfservingModelName"].(string) //tfserving config list modelname
 
 		// create tfserving grpc pool
-		tfservingGrpcPool, err := common.CreateGrpcConn(tfservingGrpcConf)
+		tfservingGrpcPool, err := utils.CreateGrpcConn(tfservingGrpcConf)
 		if err != nil {
 			return err
 		}
