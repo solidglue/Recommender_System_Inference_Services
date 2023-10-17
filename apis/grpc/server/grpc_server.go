@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"infer-microservices/common/flags"
-	"infer-microservices/cores/nacos_config"
-	"infer-microservices/cores/service_config"
+	"infer-microservices/cores/nacos_config_listener"
+	"infer-microservices/cores/service_config_loader"
 	"strings"
 	"time"
 
@@ -88,9 +88,9 @@ func getGrpcRequestParams(in *grpc_api.RecommendRequest) apis.RecRequest {
 	return request
 }
 
-func getNacosConn(in *grpc_api.RecommendRequest) nacos_config.NacosConnConfig {
+func getNacosConn(in *grpc_api.RecommendRequest) nacos_config_listener.NacosConnConfig {
 	//nacos listen need follow parms.
-	nacosConn := nacos_config.NacosConnConfig{}
+	nacosConn := nacos_config_listener.NacosConnConfig{}
 	nacosConn.SetDataId(in.GetDataId())
 	nacosConn.SetGroupId(in.GetGroupId())
 	nacosConn.SetNamespaceId(in.GetNamespace())
@@ -138,7 +138,7 @@ func (g *grpcRecommender) grpcRecommenderServerContext(ctx context.Context, in *
 	respCh <- response
 }
 
-func (r *grpcRecommender) grpcHystrixServer(serverName string, in *apis.RecRequest, ServiceConfig *service_config.ServiceConfig) (*grpc_api.RecommendResponse, error) {
+func (r *grpcRecommender) grpcHystrixServer(serverName string, in *apis.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (*grpc_api.RecommendResponse, error) {
 	response := &grpc_api.RecommendResponse{
 		Code: 404,
 	}
@@ -183,7 +183,7 @@ func (r *grpcRecommender) grpcHystrixServer(serverName string, in *apis.RecReque
 	return response, nil
 }
 
-func (g *grpcRecommender) grpcRecommender(in *apis.RecRequest, ServiceConfig *service_config.ServiceConfig) (*grpc_api.RecommendResponse, error) {
+func (g *grpcRecommender) grpcRecommender(in *apis.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (*grpc_api.RecommendResponse, error) {
 	resp_info := &grpc_api.RecommendResponse{
 		Code: 404,
 	}

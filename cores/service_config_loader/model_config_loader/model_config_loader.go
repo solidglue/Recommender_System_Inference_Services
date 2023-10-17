@@ -1,12 +1,9 @@
-package model
+package model_config_loader
 
 import (
-	"infer-microservices/common/flags"
 	"infer-microservices/utils"
 )
 
-var tfservingModelVersion int64
-var tfservingTimeout int64
 var modelClientInstance *ModelClient
 
 type ModelClient struct {
@@ -19,11 +16,7 @@ type ModelClient struct {
 }
 
 func init() {
-	flagFactory := flags.FlagFactory{}
-	flagTensorflow := flagFactory.FlagTensorflowFactory()
 
-	tfservingModelVersion = *flagTensorflow.GetTfservingModelVersion()
-	tfservingTimeout = *flagTensorflow.GetTfservingTimeoutMs()
 }
 
 // modelName

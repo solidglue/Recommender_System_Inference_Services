@@ -4,13 +4,13 @@ import (
 	"errors"
 	"infer-microservices/apis"
 	"infer-microservices/cores/model/dssm"
-	"infer-microservices/cores/service_config"
+	"infer-microservices/cores/service_config_loader"
 )
 
 type RecallInputFormat struct {
 }
 
-func (d *RecallInputFormat) InputCheckAndFormat(in *apis.RecRequest, serverConn *service_config.ServiceConfig) (dssm.Dssm, error) {
+func (d *RecallInputFormat) InputCheckAndFormat(in *apis.RecRequest, serverConn *service_config_loader.ServiceConfig) (dssm.Dssm, error) {
 	dssmm := dssm.Dssm{}
 
 	//dataid

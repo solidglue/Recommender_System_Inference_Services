@@ -4,10 +4,19 @@ import (
 	"context"
 	"infer-microservices/common"
 	faiss_index "infer-microservices/common/faiss_gogofaster"
+	"infer-microservices/common/flags"
+	"infer-microservices/cores/service_config_loader/faiss_config_loader"
 	"time"
 )
 
-func (f *FaissIndexClient) FaissVectorSearch(example common.ExampleFeatures, vector []float32) ([]*faiss_index.ItemInfo, error) {
+var grpcTimeout int64
+
+func init() {
+	flagFactory := flags.FlagFactory{}
+	flagTensorflow := flagFactory.FlagTensorflowFactory()
+	grpcTimeout = *flagTensorflow.GetTfservingTimeoutMs()
+}
+func FaissVectorSearch(f *faiss_config_loader.FaissIndexClient, example common.ExampleFeatures, vector []float32) ([]*faiss_index.ItemInfo, error) {
 	faissIndexs := f.GetFaissIndexs()
 	faissGrpcConn, err := f.GetFaissGrpcPool().Get()
 	if err != nil {

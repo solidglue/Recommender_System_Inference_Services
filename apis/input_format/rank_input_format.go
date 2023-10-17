@@ -4,13 +4,13 @@ import (
 	"errors"
 	"infer-microservices/apis"
 	"infer-microservices/cores/model/deepfm"
-	"infer-microservices/cores/service_config"
+	"infer-microservices/cores/service_config_loader"
 )
 
 type RankInputFormat struct {
 }
 
-func (d *RankInputFormat) InputCheckAndFormat(in *apis.RecRequest, serverConn *service_config.ServiceConfig) (deepfm.DeepFM, error) {
+func (d *RankInputFormat) InputCheckAndFormat(in *apis.RecRequest, serverConn *service_config_loader.ServiceConfig) (deepfm.DeepFM, error) {
 	deepfmm := deepfm.DeepFM{}
 
 	//dataid

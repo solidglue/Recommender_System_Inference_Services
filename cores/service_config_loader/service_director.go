@@ -1,4 +1,4 @@
-package service_config
+package service_config_loader
 
 type ServiceConfigDirector struct {
 }

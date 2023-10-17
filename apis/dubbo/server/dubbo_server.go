@@ -7,8 +7,8 @@ import (
 	"infer-microservices/apis"
 	"infer-microservices/apis/input_format"
 	"infer-microservices/common/flags"
-	"infer-microservices/cores/nacos_config"
-	"infer-microservices/cores/service_config"
+	"infer-microservices/cores/nacos_config_listener"
+	"infer-microservices/cores/service_config_loader"
 	"infer-microservices/utils/logs"
 	"strings"
 	"time"
@@ -80,9 +80,9 @@ func (r *DubbogoInferService) DubboRecommendServer(ctx context.Context, in *apis
 	}
 }
 
-func getNacosConn(in *apis.RecRequest) nacos_config.NacosConnConfig {
+func getNacosConn(in *apis.RecRequest) nacos_config_listener.NacosConnConfig {
 	//nacos listen need follow parms.
-	nacosConn := nacos_config.NacosConnConfig{}
+	nacosConn := nacos_config_listener.NacosConnConfig{}
 	dataId := in.GetDataId()
 	groupId := in.GetGroupId()
 	namespaceId := in.GetNamespaceId()
@@ -133,7 +133,7 @@ func (r *DubbogoInferService) dubboRecommenderServerContext(ctx context.Context,
 	respCh <- response
 }
 
-func (r *DubbogoInferService) dubboHystrixServer(serverName string, in *apis.RecRequest, ServiceConfig *service_config.ServiceConfig) (*apis.RecResponse, error) {
+func (r *DubbogoInferService) dubboHystrixServer(serverName string, in *apis.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (*apis.RecResponse, error) {
 	response := &apis.RecResponse{}
 	response.SetCode(404)
 
@@ -191,7 +191,7 @@ func getRequestParams(in *apis.RecRequest) apis.RecRequest {
 	return request
 }
 
-func (r *DubbogoInferService) dubboRecommender(in *apis.RecRequest, ServiceConfig *service_config.ServiceConfig) (*apis.RecResponse, error) {
+func (r *DubbogoInferService) dubboRecommender(in *apis.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (*apis.RecResponse, error) {
 	response := &apis.RecResponse{}
 	response.SetCode(404)
 

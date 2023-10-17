@@ -1,4 +1,4 @@
-package model
+package model_config_loader
 
 type ModelFactory struct {
 }

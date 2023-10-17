@@ -1,9 +1,9 @@
-package nacos_config
+package nacos_config_listener
 
 import (
 	"infer-microservices/apis"
 	"infer-microservices/common/flags"
-	"infer-microservices/cores/service_config"
+	"infer-microservices/cores/service_config_loader"
 	"infer-microservices/utils/logs"
 	"sync"
 
@@ -162,11 +162,11 @@ func (n *NacosConnConfig) ServiceConfigUpdate(dataId string, content string) err
 	mt.Lock()
 	defer mt.Unlock()
 
-	director := service_config.ServiceConfigDirector{}
+	director := service_config_loader.ServiceConfigDirector{}
 	NacosContent := NacosContent{}
 	domain, redisConfStr, modelConfStr, indexConfStr := NacosContent.InputServiceConfigParse(content)
 
-	var serviceConf service_config.ServiceConfig
+	var serviceConf service_config_loader.ServiceConfig
 	if indexConfStr == "{}" {
 		//recall
 		serviceConf = director.ServiceConfigUpdateContainIndexDirector(domain, dataId, redisConfStr, modelConfStr, indexConfStr)

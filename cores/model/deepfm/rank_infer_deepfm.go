@@ -1,10 +1,14 @@
 package deepfm
 
 import (
+	"context"
 	"encoding/json"
 	"infer-microservices/common"
 	faiss_index "infer-microservices/common/faiss_gogofaster"
-	"infer-microservices/cores/service_config"
+	"infer-microservices/common/flags"
+	framework "infer-microservices/common/tensorflow_gogofaster/core/framework"
+	tfserving "infer-microservices/common/tfserving_gogofaster"
+	"infer-microservices/cores/service_config_loader"
 	"infer-microservices/utils"
 	"infer-microservices/utils/logs"
 	"net/http"
@@ -12,14 +16,17 @@ import (
 	"time"
 
 	"github.com/allegro/bigcache"
+	"github.com/gogo/protobuf/types"
 )
 
 var bigCacheConfRankResult bigcache.Config
+var tfservingModelVersion int64
+var tfservingTimeout int64
 
 type DeepFM struct {
 	userId        string
 	itemList      []string
-	serviceConfig *service_config.ServiceConfig
+	serviceConfig *service_config_loader.ServiceConfig
 }
 
 func init() {
@@ -34,6 +41,12 @@ func init() {
 		OnRemove:           nil,
 		OnRemoveWithReason: nil,
 	}
+
+	flagFactory := flags.FlagFactory{}
+	flagTensorflow := flagFactory.FlagTensorflowFactory()
+
+	tfservingModelVersion = *flagTensorflow.GetTfservingModelVersion()
+	tfservingTimeout = *flagTensorflow.GetTfservingTimeoutMs()
 }
 
 // userid
@@ -55,11 +68,11 @@ func (d *DeepFM) getItemList() []string {
 }
 
 // serviceConfig *service_config.ServiceConfig
-func (d *DeepFM) SetServiceConfig(serviceConfig *service_config.ServiceConfig) {
+func (d *DeepFM) SetServiceConfig(serviceConfig *service_config_loader.ServiceConfig) {
 	d.serviceConfig = serviceConfig
 }
 
-func (d *DeepFM) getServiceConfig() *service_config.ServiceConfig {
+func (d *DeepFM) getServiceConfig() *service_config_loader.ServiceConfig {
 	return d.serviceConfig
 }
 
@@ -109,7 +122,7 @@ func (d *DeepFM) RankInferSkywalking(r *http.Request) (map[string]interface{}, e
 	}
 	spanUnionEmFv.SetOperationName("get rank scores func")
 	spanUnionEmFv.Log(time.Now())
-	items_, scores_, err := d.getServiceConfig().GetModelClient().RankPredict(examples, tensorName)
+	items_, scores_, err := d.rankPredict(examples, tensorName) // d.getServiceConfig().GetModelClient().rankPredict(examples, tensorName)
 	if err != nil {
 		return nil, err
 	} else {
@@ -135,7 +148,7 @@ func (d *DeepFM) RankInferSkywalking(r *http.Request) (map[string]interface{}, e
 	}
 	spanUnionEmOut.SetOperationName("get rank result func")
 	spanUnionEmOut.Log(time.Now())
-	rankRst, err := d.recallResultFmt(&rankResult)
+	rankRst, err := d.rankResultFmt(&rankResult)
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +195,7 @@ func (d *DeepFM) RankInferNoSkywalking(r *http.Request) (map[string]interface{},
 	items := make([]string, 0)
 	scores := make([]float32, 0)
 	rankResult := make([]*faiss_index.ItemInfo, 0)
-	items_, scores_, err := d.getServiceConfig().GetModelClient().RankPredict(examples, tensorName)
+	items_, scores_, err := d.rankPredict(examples, tensorName) //d.getServiceConfig().GetModelClient().rankPredict(examples, tensorName)
 	if err != nil {
 		logs.Error(err)
 		return nil, err
@@ -201,7 +214,7 @@ func (d *DeepFM) RankInferNoSkywalking(r *http.Request) (map[string]interface{},
 	}
 
 	//format result.
-	rankRst, err := d.recallResultFmt(&rankResult)
+	rankRst, err := d.rankResultFmt(&rankResult)
 	if err != nil {
 		return nil, err
 	}
@@ -215,7 +228,7 @@ func (d *DeepFM) RankInferNoSkywalking(r *http.Request) (map[string]interface{},
 	return response, nil
 }
 
-func (d *DeepFM) recallResultFmt(rankResult *[]*faiss_index.ItemInfo) (*[]map[string]interface{}, error) {
+func (d *DeepFM) rankResultFmt(rankResult *[]*faiss_index.ItemInfo) (*[]map[string]interface{}, error) {
 
 	recall := make([]map[string]interface{}, 0)
 	recallTmp := make(chan map[string]interface{}, len(*rankResult)) // 20221011
@@ -242,4 +255,107 @@ func (d *DeepFM) recallResultFmt(rankResult *[]*faiss_index.ItemInfo) (*[]map[st
 	close(recallTmp)
 
 	return &recall, nil
+}
+
+// request rank scores from tfserving
+func (d *DeepFM) rankPredict(examples common.ExampleFeatures, tensorName string) (*[]string, *[]float32, error) {
+
+	userExamples := make([][]byte, 0)
+	userContextExamples := make([][]byte, 0)
+	itemExamples := make([][]byte, 0)
+	items := make([]string, 0)
+
+	userExamples = append(userExamples, *(examples.UserExampleFeatures.Buff))
+	userContextExamples = append(userContextExamples, *(examples.UserContextExampleFeatures.Buff))
+
+	for _, itemExample := range *examples.ItemSeqExampleFeatures {
+		items = append(items, *(itemExample.Key))
+		itemExamples = append(itemExamples, *(itemExample.Buff))
+	}
+
+	scores, err := d.requestTfservering(&userExamples, &userContextExamples, &itemExamples, tensorName)
+
+	if err != nil {
+		logs.Error(err)
+		return nil, nil, err
+	}
+
+	return &items, scores, nil
+}
+
+func (d *DeepFM) requestTfservering(userExamples *[][]byte, userContextExamples *[][]byte, itemExamples *[][]byte, tensorName string) (*[]float32, error) {
+	grpcConn, err := d.getServiceConfig().GetModelClient().GetTfservingGrpcPool().Get()
+	defer d.getServiceConfig().GetModelClient().GetTfservingGrpcPool().Put(grpcConn)
+
+	if err != nil {
+		return nil, err
+	}
+	predictClient := tfserving.NewPredictionServiceClient(grpcConn)
+
+	version := &types.Int64Value{Value: tfservingModelVersion}
+	predictRequest := &tfserving.PredictRequest{
+		ModelSpec: &tfserving.ModelSpec{
+			Name:    d.getServiceConfig().GetModelClient().GetModelName(),
+			Version: version,
+		},
+		Inputs: make(map[string]*framework.TensorProto),
+	}
+
+	//user examples
+	tensorProtoUser := &framework.TensorProto{
+		Dtype: framework.DataType_DT_STRING,
+	}
+	tensorProtoUser.TensorShape = &framework.TensorShapeProto{
+		Dim: []*framework.TensorShapeProto_Dim{
+			{
+				Size_: int64(len(*userExamples)),
+				Name:  "",
+			},
+		},
+	}
+	tensorProtoUser.StringVal = *userExamples
+	predictRequest.Inputs["userExamples"] = tensorProtoUser
+
+	//context examples, realtime
+	tensorProtoUserContext := &framework.TensorProto{
+		Dtype: framework.DataType_DT_STRING,
+	}
+	tensorProtoUserContext.TensorShape = &framework.TensorShapeProto{
+		Dim: []*framework.TensorShapeProto_Dim{
+			{
+				Size_: int64(len(*userContextExamples)),
+				Name:  "",
+			},
+		},
+	}
+	tensorProtoUserContext.StringVal = *userContextExamples
+	predictRequest.Inputs["userContextExamples"] = tensorProtoUserContext
+
+	//item examples
+	tensorProtoItem := &framework.TensorProto{
+		Dtype: framework.DataType_DT_STRING,
+	}
+	tensorProtoItem.TensorShape = &framework.TensorShapeProto{
+		Dim: []*framework.TensorShapeProto_Dim{
+			{
+				Size_: int64(len(*itemExamples)),
+				Name:  "",
+			},
+		},
+	}
+	tensorProtoItem.StringVal = *itemExamples
+	predictRequest.Inputs["itemExamples"] = tensorProtoItem
+
+	predictRequest.OutputFilter = []string{tensorName}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(tfservingTimeout)*time.Millisecond)
+	defer cancel()
+
+	predict, err := predictClient.Predict(ctx, predictRequest)
+	if err != nil {
+		return nil, err
+	}
+	predictOut, _ := predict.Outputs[tensorName]
+
+	return &predictOut.FloatVal, nil
 }

@@ -1,4 +1,4 @@
-package redis_config
+package redis_config_loader
 
 type RedisFactory struct {
 }

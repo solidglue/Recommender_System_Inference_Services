@@ -1,9 +1,9 @@
-package service_config
+package service_config_loader
 
 import (
-	"infer-microservices/cores/faiss"
-	"infer-microservices/cores/model"
-	"infer-microservices/cores/service_config/redis_config"
+	"infer-microservices/cores/service_config_loader/faiss_config_loader"
+	"infer-microservices/cores/service_config_loader/model_config_loader"
+	"infer-microservices/cores/service_config_loader/redis_config_loader"
 )
 
 type ServiceConfigBuilder struct {
@@ -20,7 +20,7 @@ func (b *ServiceConfigBuilder) GetServiceConfig() ServiceConfig {
 }
 
 func (b *ServiceConfigBuilder) RedisClientBuilder(domain string, DataId string, redisConfStr string) *ServiceConfigBuilder {
-	redisFactory := redis_config.RedisFactory{}
+	redisFactory := redis_config_loader.RedisFactory{}
 	redisClient := redisFactory.RedisClientFactory(domain, DataId, redisConfStr)
 	b.serviceConfig.setRedisClient(*redisClient)
 
@@ -29,7 +29,7 @@ func (b *ServiceConfigBuilder) RedisClientBuilder(domain string, DataId string, 
 
 func (b *ServiceConfigBuilder) FaissClientBuilder(indexConfStr string) *ServiceConfigBuilder {
 	//load redis conf
-	faissFactory := faiss.FaissFactory{}
+	faissFactory := faiss_config_loader.FaissFactory{}
 	faissClient := faissFactory.FaissClientFactory(indexConfStr)
 	b.serviceConfig.setFaissIndexClient(*faissClient)
 
@@ -38,7 +38,7 @@ func (b *ServiceConfigBuilder) FaissClientBuilder(indexConfStr string) *ServiceC
 
 func (b *ServiceConfigBuilder) ModelClientBuilder(modelConfStr string) *ServiceConfigBuilder {
 	//load redis conf
-	modelFactory := model.ModelFactory{}
+	modelFactory := model_config_loader.ModelFactory{}
 	modelClient := modelFactory.ModelClientFactory(modelConfStr)
 	b.serviceConfig.setModelClient(*modelClient)
 

@@ -1,4 +1,4 @@
-package faiss
+package faiss_config_loader
 
 type FaissFactory struct {
 }

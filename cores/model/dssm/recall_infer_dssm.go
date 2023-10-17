@@ -1,10 +1,15 @@
 package dssm
 
 import (
+	"context"
 	"encoding/json"
 	"infer-microservices/common"
 	faiss_index "infer-microservices/common/faiss_gogofaster"
-	"infer-microservices/cores/service_config"
+	"infer-microservices/common/flags"
+	framework "infer-microservices/common/tensorflow_gogofaster/core/framework"
+	tfserving "infer-microservices/common/tfserving_gogofaster"
+	"infer-microservices/cores/faiss"
+	"infer-microservices/cores/service_config_loader"
 	"infer-microservices/utils"
 
 	"infer-microservices/utils/logs"
@@ -13,14 +18,17 @@ import (
 	"time"
 
 	"github.com/allegro/bigcache"
+	"github.com/gogo/protobuf/types"
 )
 
 var bigCacheConfRecallResult bigcache.Config
+var tfservingModelVersion int64
+var tfservingTimeout int64
 
 type Dssm struct {
 	userId        string
 	retNum        int
-	serviceConfig *service_config.ServiceConfig
+	serviceConfig *service_config_loader.ServiceConfig
 }
 
 func init() {
@@ -35,6 +43,12 @@ func init() {
 		OnRemove:           nil,
 		OnRemoveWithReason: nil,
 	}
+
+	flagFactory := flags.FlagFactory{}
+	flagTensorflow := flagFactory.FlagTensorflowFactory()
+
+	tfservingModelVersion = *flagTensorflow.GetTfservingModelVersion()
+	tfservingTimeout = *flagTensorflow.GetTfservingTimeoutMs()
 }
 
 // userid
@@ -56,11 +70,11 @@ func (d *Dssm) getRetNum() int {
 }
 
 // serviceConfig *service_config.ServiceConfig
-func (d *Dssm) SetServiceConfig(serviceConfig *service_config.ServiceConfig) {
+func (d *Dssm) SetServiceConfig(serviceConfig *service_config_loader.ServiceConfig) {
 	d.serviceConfig = serviceConfig
 }
 
-func (d *Dssm) getServiceConfig() *service_config.ServiceConfig {
+func (d *Dssm) getServiceConfig() *service_config_loader.ServiceConfig {
 	return d.serviceConfig
 }
 
@@ -110,7 +124,7 @@ func (d *Dssm) RecallInferSkywalking(r *http.Request) (map[string]interface{}, e
 	spanUnionEmFv.SetOperationName("get recall embedding func")
 	spanUnionEmFv.Log(time.Now())
 
-	embeddingVector_, err := d.getServiceConfig().GetModelClient().Embedding(examples, tensorName)
+	embeddingVector_, err := d.embedding(examples, tensorName) // d.getServiceConfig().GetModelClient().embedding(examples, tensorName)
 	if err != nil {
 		logs.Error(err)
 		return nil, err
@@ -129,7 +143,7 @@ func (d *Dssm) RecallInferSkywalking(r *http.Request) (map[string]interface{}, e
 	}
 	spanUnionEmFr.SetOperationName("get recall faiss index func")
 	spanUnionEmFr.Log(time.Now())
-	recallResult, err = d.getServiceConfig().GetFaissIndexClient().FaissVectorSearch(examples, embeddingVector)
+	recallResult, err = faiss.FaissVectorSearch(d.getServiceConfig().GetFaissIndexClient(), examples, embeddingVector)
 	if err != nil {
 		logs.Error(err)
 		return nil, err
@@ -193,7 +207,7 @@ func (d *Dssm) RecallInferNoSkywalking(r *http.Request) (map[string]interface{},
 
 	// get embedding from tfserving model.
 	embeddingVector := make([]float32, 0)
-	embeddingVector_, err := d.getServiceConfig().GetModelClient().Embedding(examples, tensorName)
+	embeddingVector_, err := d.embedding(examples, tensorName) // d.getServiceConfig().GetModelClient().embedding(examples, tensorName)
 	if err != nil {
 		return nil, err
 	} else {
@@ -202,7 +216,7 @@ func (d *Dssm) RecallInferNoSkywalking(r *http.Request) (map[string]interface{},
 
 	//request faiss index
 	recallResult := make([]*faiss_index.ItemInfo, 0)
-	recallResult, err = d.getServiceConfig().GetFaissIndexClient().FaissVectorSearch(examples, embeddingVector)
+	recallResult, err = faiss.FaissVectorSearch(d.getServiceConfig().GetFaissIndexClient(), examples, embeddingVector)
 	if err != nil {
 		return nil, err
 	}
@@ -251,4 +265,100 @@ func (d *Dssm) recallResultFmt(recallResult *[]*faiss_index.ItemInfo) (*[]map[st
 	close(recallTmp)
 
 	return &recall, nil
+}
+
+// request embedding vector from tfserving
+func (d *Dssm) embedding(examples common.ExampleFeatures, tensorName string) (*[]float32, error) {
+
+	userExamples := make([][]byte, 0)
+	userContextExamples := make([][]byte, 0)
+	itemExamples := make([][]byte, 0)
+
+	userExamples = append(userExamples, *(examples.UserExampleFeatures.Buff))
+	userContextExamples = append(userContextExamples, *(examples.UserContextExampleFeatures.Buff))
+
+	response, err := d.requestTfservering(&userExamples, &itemExamples, &userContextExamples, tensorName)
+	if err != nil {
+		logs.Error(err)
+		return nil, err
+	}
+
+	return response, nil
+}
+
+func (d *Dssm) requestTfservering(userExamples *[][]byte, userContextExamples *[][]byte, itemExamples *[][]byte, tensorName string) (*[]float32, error) {
+	grpcConn, err := d.getServiceConfig().GetModelClient().GetTfservingGrpcPool().Get()
+	defer d.getServiceConfig().GetModelClient().GetTfservingGrpcPool().Put(grpcConn)
+
+	if err != nil {
+		return nil, err
+	}
+	predictClient := tfserving.NewPredictionServiceClient(grpcConn)
+
+	version := &types.Int64Value{Value: tfservingModelVersion}
+	predictRequest := &tfserving.PredictRequest{
+		ModelSpec: &tfserving.ModelSpec{
+			Name:    d.getServiceConfig().GetModelClient().GetModelName(),
+			Version: version,
+		},
+		Inputs: make(map[string]*framework.TensorProto),
+	}
+
+	//user examples
+	tensorProtoUser := &framework.TensorProto{
+		Dtype: framework.DataType_DT_STRING,
+	}
+	tensorProtoUser.TensorShape = &framework.TensorShapeProto{
+		Dim: []*framework.TensorShapeProto_Dim{
+			{
+				Size_: int64(len(*userExamples)),
+				Name:  "",
+			},
+		},
+	}
+	tensorProtoUser.StringVal = *userExamples
+	predictRequest.Inputs["userExamples"] = tensorProtoUser
+
+	//context examples, realtime
+	tensorProtoUserContext := &framework.TensorProto{
+		Dtype: framework.DataType_DT_STRING,
+	}
+	tensorProtoUserContext.TensorShape = &framework.TensorShapeProto{
+		Dim: []*framework.TensorShapeProto_Dim{
+			{
+				Size_: int64(len(*userContextExamples)),
+				Name:  "",
+			},
+		},
+	}
+	tensorProtoUserContext.StringVal = *userContextExamples
+	predictRequest.Inputs["userContextExamples"] = tensorProtoUserContext
+
+	//item examples
+	tensorProtoItem := &framework.TensorProto{
+		Dtype: framework.DataType_DT_STRING,
+	}
+	tensorProtoItem.TensorShape = &framework.TensorShapeProto{
+		Dim: []*framework.TensorShapeProto_Dim{
+			{
+				Size_: int64(len(*itemExamples)),
+				Name:  "",
+			},
+		},
+	}
+	tensorProtoItem.StringVal = *itemExamples
+	predictRequest.Inputs["itemExamples"] = tensorProtoItem
+
+	predictRequest.OutputFilter = []string{tensorName}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(tfservingTimeout)*time.Millisecond)
+	defer cancel()
+
+	predict, err := predictClient.Predict(ctx, predictRequest)
+	if err != nil {
+		return nil, err
+	}
+	predictOut, _ := predict.Outputs[tensorName]
+
+	return &predictOut.FloatVal, nil
 }

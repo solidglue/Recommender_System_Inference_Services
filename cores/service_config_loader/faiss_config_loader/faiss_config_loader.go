@@ -1,13 +1,11 @@
-package faiss
+package faiss_config_loader
 
 import (
 	faiss_index "infer-microservices/common/faiss_gogofaster"
-	"infer-microservices/common/flags"
 	"infer-microservices/utils"
 )
 
 var FaissIndexClientInstance *FaissIndexClient
-var grpcTimeout int64
 
 type FaissIndexClient struct {
 	indexName     string                     //index name.
@@ -17,9 +15,7 @@ type FaissIndexClient struct {
 
 // INFO: singleton instance
 func init() {
-	flagFactory := flags.FlagFactory{}
-	flagTensorflow := flagFactory.FlagTensorflowFactory()
-	grpcTimeout = *flagTensorflow.GetTfservingTimeoutMs()
+
 }
 
 // index name

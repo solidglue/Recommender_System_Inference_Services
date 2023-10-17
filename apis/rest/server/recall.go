@@ -6,8 +6,8 @@ import (
 	"infer-microservices/apis"
 	"infer-microservices/apis/input_format"
 	"infer-microservices/common/flags"
-	"infer-microservices/cores/nacos_config"
-	"infer-microservices/cores/service_config"
+	"infer-microservices/cores/nacos_config_listener"
+	"infer-microservices/cores/service_config_loader"
 	"infer-microservices/utils/logs"
 	"net/http"
 	"time"
@@ -92,7 +92,7 @@ func (c *recallServer) restInferServer(w http.ResponseWriter, r *http.Request) {
 	w.Write(buff)
 }
 
-func (c *recallServer) restHystrixRecaller(serverName string, r *http.Request, in *apis.RecRequest, ServiceConfig *service_config.ServiceConfig) (map[string]interface{}, error) {
+func (c *recallServer) restHystrixRecaller(serverName string, r *http.Request, in *apis.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (map[string]interface{}, error) {
 	response := make(map[string]interface{}, 0)
 	hystrixErr := hystrix.Do(serverName, func() error {
 		// request recall / rank func.
@@ -130,14 +130,14 @@ func (c *recallServer) restHystrixRecaller(serverName string, r *http.Request, i
 	return response, nil
 }
 
-func (c *recallServer) restRecaller(r *http.Request, in *apis.RecRequest, ServiceConfig *service_config.ServiceConfig) (map[string]interface{}, error) {
+func (c *recallServer) restRecaller(r *http.Request, in *apis.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (map[string]interface{}, error) {
 	response := make(map[string]interface{}, 0)
 
 	dataId := in.GetDataId()
 	groupId := in.GetGroupId()
 	namespaceId := in.GetNamespaceId()
 
-	nacosConn := nacos_config.NacosConnConfig{}
+	nacosConn := nacos_config_listener.NacosConnConfig{}
 	nacosConn.SetDataId(dataId)
 	nacosConn.SetGroupId(groupId)
 	nacosConn.SetNamespaceId(namespaceId)
