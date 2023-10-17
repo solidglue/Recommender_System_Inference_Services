@@ -94,7 +94,7 @@ func (c *recallServer) restInferServer(w http.ResponseWriter, r *http.Request) {
 
 func (c *recallServer) restHystrixRecaller(serverName string, r *http.Request, in *apis.RecRequest, ServiceConfig *service_config.ServiceConfig) (map[string]interface{}, error) {
 	response := make(map[string]interface{}, 0)
-	hystrix.Do(serverName, func() error {
+	hystrixErr := hystrix.Do(serverName, func() error {
 		// request recall / rank func.
 		response_, err := c.restRecaller(r, in, ServiceConfig)
 		if err != nil {
@@ -122,6 +122,10 @@ func (c *recallServer) restHystrixRecaller(serverName string, r *http.Request, i
 
 		return nil
 	})
+
+	if hystrixErr != nil {
+		return response, hystrixErr
+	}
 
 	return response, nil
 }

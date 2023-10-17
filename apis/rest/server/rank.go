@@ -98,7 +98,7 @@ func (s *rankServer) restInferServer(w http.ResponseWriter, r *http.Request) {
 
 func (s *rankServer) restHystrixRanker(serverName string, r *http.Request, in *apis.RecRequest, ServiceConfig *service_config.ServiceConfig) (map[string]interface{}, error) {
 	response := make(map[string]interface{}, 0)
-	hystrix.Do(serverName, func() error {
+	hystrixErr := hystrix.Do(serverName, func() error {
 		// request recall / rank func.
 		response_, err := s.restRanker(r, in, ServiceConfig)
 		if err != nil {
@@ -123,6 +123,10 @@ func (s *rankServer) restHystrixRanker(serverName string, r *http.Request, in *a
 		}
 		return nil
 	})
+
+	if hystrixErr != nil {
+		return response, hystrixErr
+	}
 
 	return response, nil
 }

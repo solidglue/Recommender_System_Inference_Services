@@ -110,7 +110,7 @@ func (g *grpcRecommender) grpcRecommenderServerContext(ctx context.Context, in *
 		//}
 	}()
 
-	resp_info := &grpc_api.RecommendResponse{
+	response := &grpc_api.RecommendResponse{
 		Code: 404,
 	}
 
@@ -130,27 +130,27 @@ func (g *grpcRecommender) grpcRecommenderServerContext(ctx context.Context, in *
 	request := getGrpcRequestParams(in)
 	response_, err := g.grpcHystrixServer("grpcServer", &request, ServiceConfig)
 	if err != nil {
-		resp_info.Message = fmt.Sprintf("%s", err)
+		response.Message = fmt.Sprintf("%s", err)
 		panic(err)
 	} else {
-		resp_info = response_
+		response = response_
 	}
-	respCh <- resp_info
+	respCh <- response
 }
 
 func (r *grpcRecommender) grpcHystrixServer(serverName string, in *apis.RecRequest, ServiceConfig *service_config.ServiceConfig) (*grpc_api.RecommendResponse, error) {
-	resp_info := &grpc_api.RecommendResponse{
+	response := &grpc_api.RecommendResponse{
 		Code: 404,
 	}
 
-	hystrix.Do(serverName, func() error {
+	hystrixErr := hystrix.Do(serverName, func() error {
 		// request recall / rank func.
 		response_, err := r.grpcRecommender(in, ServiceConfig)
 		if err != nil {
 			logs.Error(err)
 			return err
 		} else {
-			resp_info = response_
+			response = response_
 		}
 
 		return nil
@@ -170,13 +170,17 @@ func (r *grpcRecommender) grpcHystrixServer(serverName string, in *apis.RecReque
 			logs.Error(err)
 			return err
 		} else {
-			resp_info = response_
+			response = response_
 		}
 
 		return nil
 	})
 
-	return resp_info, nil
+	if hystrixErr != nil {
+		return response, hystrixErr
+	}
+
+	return response, nil
 }
 
 func (g *grpcRecommender) grpcRecommender(in *apis.RecRequest, ServiceConfig *service_config.ServiceConfig) (*grpc_api.RecommendResponse, error) {

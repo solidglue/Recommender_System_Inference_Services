@@ -137,7 +137,7 @@ func (r *DubbogoInferService) dubboHystrixServer(serverName string, in *apis.Rec
 	response := &apis.RecResponse{}
 	response.SetCode(404)
 
-	hystrix.Do(serverName, func() error {
+	hystrixErr := hystrix.Do(serverName, func() error {
 		// request recall / rank func.
 		response_, err := r.dubboRecommender(in, ServiceConfig)
 		if err != nil {
@@ -166,6 +166,10 @@ func (r *DubbogoInferService) dubboHystrixServer(serverName string, in *apis.Rec
 		}
 		return nil
 	})
+
+	if hystrixErr != nil {
+		return response, hystrixErr
+	}
 
 	return response, nil
 }
