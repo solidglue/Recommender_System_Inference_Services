@@ -43,7 +43,7 @@ func init() {
 	}
 }
 
-func (d *Dssm) getInferExampleFeatures() (common.ExampleFeatures, error) {
+func (d *Dssm) GetInferExampleFeatures() (common.ExampleFeatures, error) {
 	cacheKeyPrefix := d.getUserId() + d.serviceConfig.GetServiceId() + "_recallSamples"
 
 	//init examples

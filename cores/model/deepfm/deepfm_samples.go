@@ -41,7 +41,7 @@ func init() {
 	}
 }
 
-func (d *DeepFM) getInferExampleFeatures() (common.ExampleFeatures, error) {
+func (d *DeepFM) GetInferExampleFeatures() (common.ExampleFeatures, error) {
 	cacheKeyPrefix := d.getUserId() + d.serviceConfig.GetServiceId() + "_rankSamples"
 
 	//init examples

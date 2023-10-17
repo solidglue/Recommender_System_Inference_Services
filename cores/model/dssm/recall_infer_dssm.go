@@ -108,7 +108,7 @@ func (d *Dssm) RecallInferSkywalking(r *http.Request) (map[string]interface{}, e
 
 	spanUnionEmFv.SetOperationName("get recall infer examples func")
 	spanUnionEmFv.Log(time.Now())
-	examples, err = d.getInferExampleFeatures()
+	examples, err = d.GetInferExampleFeatures()
 	if err != nil {
 		return nil, err
 	}
@@ -203,7 +203,7 @@ func (d *Dssm) RecallInferNoSkywalking(r *http.Request) (map[string]interface{},
 
 	//get infer samples.
 	examples := common.ExampleFeatures{}
-	examples, err = d.getInferExampleFeatures()
+	examples, err = d.GetInferExampleFeatures()
 
 	// get embedding from tfserving model.
 	embeddingVector := make([]float32, 0)
@@ -277,7 +277,7 @@ func (d *Dssm) embedding(examples common.ExampleFeatures, tensorName string) (*[
 	userExamples = append(userExamples, *(examples.UserExampleFeatures.Buff))
 	userContextExamples = append(userContextExamples, *(examples.UserContextExampleFeatures.Buff))
 
-	response, err := d.requestTfservering(&userExamples, &itemExamples, &userContextExamples, tensorName)
+	response, err := d.RequestTfservering(&userExamples, &itemExamples, &userContextExamples, tensorName)
 	if err != nil {
 		logs.Error(err)
 		return nil, err
@@ -286,7 +286,7 @@ func (d *Dssm) embedding(examples common.ExampleFeatures, tensorName string) (*[
 	return response, nil
 }
 
-func (d *Dssm) requestTfservering(userExamples *[][]byte, userContextExamples *[][]byte, itemExamples *[][]byte, tensorName string) (*[]float32, error) {
+func (d *Dssm) RequestTfservering(userExamples *[][]byte, userContextExamples *[][]byte, itemExamples *[][]byte, tensorName string) (*[]float32, error) {
 	grpcConn, err := d.getServiceConfig().GetModelClient().GetTfservingGrpcPool().Get()
 	defer d.getServiceConfig().GetModelClient().GetTfservingGrpcPool().Put(grpcConn)
 

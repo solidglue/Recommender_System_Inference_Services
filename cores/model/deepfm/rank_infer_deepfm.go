@@ -105,7 +105,7 @@ func (d *DeepFM) RankInferSkywalking(r *http.Request) (map[string]interface{}, e
 	}
 	spanUnionEmFv.SetOperationName("get rank infer examples func")
 	spanUnionEmFv.Log(time.Now())
-	examples, err := d.getInferExampleFeatures()
+	examples, err := d.GetInferExampleFeatures()
 	if err != nil {
 		return nil, err
 	}
@@ -186,7 +186,7 @@ func (d *DeepFM) RankInferNoSkywalking(r *http.Request) (map[string]interface{},
 	}
 
 	//get infer samples.
-	examples, err := d.getInferExampleFeatures()
+	examples, err := d.GetInferExampleFeatures()
 	if err != nil {
 		return nil, err
 	}
@@ -273,7 +273,7 @@ func (d *DeepFM) rankPredict(examples common.ExampleFeatures, tensorName string)
 		itemExamples = append(itemExamples, *(itemExample.Buff))
 	}
 
-	scores, err := d.requestTfservering(&userExamples, &userContextExamples, &itemExamples, tensorName)
+	scores, err := d.RequestTfservering(&userExamples, &userContextExamples, &itemExamples, tensorName)
 
 	if err != nil {
 		logs.Error(err)
@@ -283,7 +283,7 @@ func (d *DeepFM) rankPredict(examples common.ExampleFeatures, tensorName string)
 	return &items, scores, nil
 }
 
-func (d *DeepFM) requestTfservering(userExamples *[][]byte, userContextExamples *[][]byte, itemExamples *[][]byte, tensorName string) (*[]float32, error) {
+func (d *DeepFM) RequestTfservering(userExamples *[][]byte, userContextExamples *[][]byte, itemExamples *[][]byte, tensorName string) (*[]float32, error) {
 	grpcConn, err := d.getServiceConfig().GetModelClient().GetTfservingGrpcPool().Get()
 	defer d.getServiceConfig().GetModelClient().GetTfservingGrpcPool().Put(grpcConn)
 
