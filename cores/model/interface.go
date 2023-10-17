@@ -4,7 +4,7 @@ import "infer-microservices/common"
 
 type RequestTfserveringInterface interface {
 	//request tfserving model.
-	requestTfservering(userExamples *[][]byte, userContextExamples *[][]byte, itemExamples *[][]byte, tensorName string) (*[]float32, error)
+	RequestTfservering(userExamples *[][]byte, userContextExamples *[][]byte, itemExamples *[][]byte, tensorName string) (*[]float32, error)
 }
 
 type GetInferExampleFeaturesInterface interface {
