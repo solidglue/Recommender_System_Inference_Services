@@ -5,9 +5,7 @@ import (
 	"infer-microservices/utils"
 )
 
-var FaissIndexClientInstance *FaissIndexClient
-
-type FaissIndexClient struct {
+type FaissIndexConfig struct {
 	indexName     string                     //index name.
 	faissGrpcPool *utils.GRPCPool            //faiss  grpc pool.
 	faissIndexs   *faiss_index.RecallRequest // faiss index.
@@ -19,34 +17,34 @@ func init() {
 }
 
 // index name
-func (f *FaissIndexClient) setIndexName(indexName string) {
+func (f *FaissIndexConfig) setIndexName(indexName string) {
 	f.indexName = indexName
 }
 
-func (f *FaissIndexClient) GetIndexName() string {
+func (f *FaissIndexConfig) GetIndexName() string {
 	return f.indexName
 }
 
 // grpc pool
-func (f *FaissIndexClient) setFaissGrpcPool(faissGrpcPool *utils.GRPCPool) {
+func (f *FaissIndexConfig) setFaissGrpcPool(faissGrpcPool *utils.GRPCPool) {
 	f.faissGrpcPool = faissGrpcPool
 }
 
-func (f *FaissIndexClient) GetFaissGrpcPool() *utils.GRPCPool {
+func (f *FaissIndexConfig) GetFaissGrpcPool() *utils.GRPCPool {
 	return f.faissGrpcPool
 }
 
 // FaissIndexs
-func (f *FaissIndexClient) setFaissIndexs(faissIndexs *faiss_index.RecallRequest) {
+func (f *FaissIndexConfig) setFaissIndexs(faissIndexs *faiss_index.RecallRequest) {
 	f.faissIndexs = faissIndexs
 }
 
-func (f *FaissIndexClient) GetFaissIndexs() *faiss_index.RecallRequest {
+func (f *FaissIndexConfig) GetFaissIndexs() *faiss_index.RecallRequest {
 	return f.faissIndexs
 }
 
 // faiss index conf load
-func (f *FaissIndexClient) ConfigLoad(domain string, dataId string, indexConfStr string) error {
+func (f *FaissIndexConfig) ConfigLoad(domain string, dataId string, indexConfStr string) error {
 	dataConf := utils.Json2Map(indexConfStr)
 
 	// create faiss grpc pool

@@ -4,9 +4,7 @@ import (
 	"infer-microservices/utils"
 )
 
-var modelClientInstance *ModelClient
-
-type ModelClient struct {
+type ModelConfig struct {
 	modelName          string                 //model name.
 	tfservingModelName string                 //model name of tfserving config list.
 	tfservingGrpcPool  *utils.GRPCPool        //tfserving grpc pool.
@@ -20,52 +18,52 @@ func init() {
 }
 
 // modelName
-func (f *ModelClient) setModelName(modelName string) {
+func (f *ModelConfig) setModelName(modelName string) {
 	f.modelName = modelName
 }
 
-func (f *ModelClient) GetModelName() string {
+func (f *ModelConfig) GetModelName() string {
 	return f.modelName
 }
 
 // tfservingModelName
-func (f *ModelClient) setTfservingModelName(tfservingModelName string) {
+func (f *ModelConfig) setTfservingModelName(tfservingModelName string) {
 	f.tfservingModelName = tfservingModelName
 }
 
-func (f *ModelClient) GetTfservingModelName() string {
+func (f *ModelConfig) GetTfservingModelName() string {
 	return f.tfservingModelName
 }
 
 // tfservingGrpcPool
-func (f *ModelClient) setTfservingGrpcPool(tfservingGrpcPool *utils.GRPCPool) {
+func (f *ModelConfig) setTfservingGrpcPool(tfservingGrpcPool *utils.GRPCPool) {
 	f.tfservingGrpcPool = tfservingGrpcPool
 }
 
-func (f *ModelClient) GetTfservingGrpcPool() *utils.GRPCPool {
+func (f *ModelConfig) GetTfservingGrpcPool() *utils.GRPCPool {
 	return f.tfservingGrpcPool
 }
 
 // userRedisKeyPre
-func (f *ModelClient) setUserRedisKeyPre(userRedisKeyPre string) {
+func (f *ModelConfig) setUserRedisKeyPre(userRedisKeyPre string) {
 	f.userRedisKeyPre = userRedisKeyPre
 }
 
-func (f *ModelClient) GetUserRedisKeyPre() string {
+func (f *ModelConfig) GetUserRedisKeyPre() string {
 	return f.userRedisKeyPre
 }
 
 // itemRedisKeyPre
-func (f *ModelClient) setItemRedisKeyPre(itemRedisKeyPre string) {
+func (f *ModelConfig) setItemRedisKeyPre(itemRedisKeyPre string) {
 	f.itemRedisKeyPre = itemRedisKeyPre
 }
 
-func (f *ModelClient) GetItemRedisKeyPre() string {
+func (f *ModelConfig) GetItemRedisKeyPre() string {
 	return f.itemRedisKeyPre
 }
 
 // model conf load
-func (m *ModelClient) ConfigLoad(domain string, dataId string, modelConfStr string) error {
+func (m *ModelConfig) ConfigLoad(domain string, dataId string, modelConfStr string) error {
 
 	dataConf := utils.Json2Map(modelConfStr)
 	for tmpModelName_, tmpModelConf_ := range dataConf { // only 1 model

@@ -5,9 +5,7 @@ import (
 	redis_v8 "infer-microservices/utils/redis"
 )
 
-var RedisClientInstance *RedisClient
-
-type RedisClient struct {
+type RedisConfig struct {
 	domain    string //share redis by domain.
 	redisPool *redis_v8.InferRedisClient
 }
@@ -22,25 +20,25 @@ type RedisClient struct {
 // }
 
 // domain
-func (r *RedisClient) setRedisDomain(domain string) {
+func (r *RedisConfig) setRedisDomain(domain string) {
 	r.domain = domain
 }
 
-func (r *RedisClient) GetRedisDomain() string {
+func (r *RedisConfig) GetRedisDomain() string {
 	return r.domain
 }
 
 // redis pool
-func (r *RedisClient) setRedisPool(redisPool *redis_v8.InferRedisClient) {
+func (r *RedisConfig) setRedisPool(redisPool *redis_v8.InferRedisClient) {
 	r.redisPool = redisPool
 }
 
-func (r *RedisClient) GetRedisPool() *redis_v8.InferRedisClient {
+func (r *RedisConfig) GetRedisPool() *redis_v8.InferRedisClient {
 	return r.redisPool
 }
 
 // redis conf load
-func (r *RedisClient) ConfigLoad(domain string, dataId string, redisConfStr string) error {
+func (r *RedisConfig) ConfigLoad(domain string, dataId string, redisConfStr string) error {
 
 	confMap := utils.Json2Map(redisConfStr)
 	redisClusterInfo := confMap["redisCluster"].(map[string]interface{})

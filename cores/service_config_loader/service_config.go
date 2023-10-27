@@ -8,13 +8,12 @@ import (
 )
 
 var serviceConfFile string
-var serviceConfigInstance *ServiceConfig
 
 type ServiceConfig struct {
 	serviceId        string                               //dataid
-	redisClient      redis_config_loader.RedisClient      //redis conn info
-	faissIndexClient faiss_config_loader.FaissIndexClient //index conn info
-	modelClient      model_config_loader.ModelClient      //model conn info
+	redisConfig      redis_config_loader.RedisConfig      //redis conn info
+	faissIndexConfig faiss_config_loader.FaissIndexConfig //index conn info
+	modelConfig      model_config_loader.ModelConfig      //model conn info
 }
 
 func init() {
@@ -32,29 +31,29 @@ func (s *ServiceConfig) GetServiceId() string {
 	return s.serviceId
 }
 
-// redisClient
-func (s *ServiceConfig) setRedisClient(redisClient redis_config_loader.RedisClient) {
-	s.redisClient = redisClient
+// redisConfig
+func (s *ServiceConfig) setRedisConfig(redisConfig redis_config_loader.RedisConfig) {
+	s.redisConfig = redisConfig
 }
 
-func (s *ServiceConfig) GetRedisClient() *redis_config_loader.RedisClient {
-	return &s.redisClient
+func (s *ServiceConfig) GetRedisConfig() *redis_config_loader.RedisConfig {
+	return &s.redisConfig
 }
 
-// faissIndexClient
-func (s *ServiceConfig) setFaissIndexClient(faissIndexClient faiss_config_loader.FaissIndexClient) {
-	s.faissIndexClient = faissIndexClient
+// faissIndexConfig
+func (s *ServiceConfig) setFaissIndexConfig(faissIndexConfig faiss_config_loader.FaissIndexConfig) {
+	s.faissIndexConfig = faissIndexConfig
 }
 
-func (s *ServiceConfig) GetFaissIndexClient() *faiss_config_loader.FaissIndexClient {
-	return &s.faissIndexClient
+func (s *ServiceConfig) GetFaissIndexConfig() *faiss_config_loader.FaissIndexConfig {
+	return &s.faissIndexConfig
 }
 
-// modelClient
-func (s *ServiceConfig) setModelClient(modelClient model_config_loader.ModelClient) {
-	s.modelClient = modelClient
+// modelConfig
+func (s *ServiceConfig) setModelConfig(modelConfig model_config_loader.ModelConfig) {
+	s.modelConfig = modelConfig
 }
 
-func (s *ServiceConfig) GetModelClient() *model_config_loader.ModelClient {
-	return &s.modelClient
+func (s *ServiceConfig) GetModelConfig() *model_config_loader.ModelConfig {
+	return &s.modelConfig
 }
