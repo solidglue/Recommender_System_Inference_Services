@@ -106,8 +106,8 @@ func (d *Dssm) GetInferExampleFeatures() (common.ExampleFeatures, error) {
 func (d *Dssm) getUserExampleFeatures() (*common.SeqExampleBuff, error) {
 
 	//TODO: update context features.
-	redisKey := d.getServiceConfig().GetModelClient().GetUserRedisKeyPre() + d.getUserId()
-	userExampleFeats, err := d.getServiceConfig().GetRedisClient().GetRedisPool().Get(redisKey)
+	redisKey := d.getServiceConfig().GetModelConfig().GetUserRedisKeyPre() + d.getUserId()
+	userExampleFeats, err := d.getServiceConfig().GetRedisConfig().GetRedisPool().Get(redisKey)
 
 	userSeqExampleBuff := common.SeqExampleBuff{}
 	userExampleFeatsBuff := make([]byte, 0)

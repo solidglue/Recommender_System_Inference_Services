@@ -1,4 +1,4 @@
-package deepfm
+package dssm
 
 import (
 	"context"
@@ -8,8 +8,10 @@ import (
 	"infer-microservices/common/flags"
 	framework "infer-microservices/common/tensorflow_gogofaster/core/framework"
 	tfserving "infer-microservices/common/tfserving_gogofaster"
+	"infer-microservices/cores/faiss"
 	"infer-microservices/cores/service_config_loader"
 	"infer-microservices/utils"
+
 	"infer-microservices/utils/logs"
 	"net/http"
 	"sync"
@@ -19,25 +21,26 @@ import (
 	"github.com/gogo/protobuf/types"
 )
 
-var bigCacheConfRankResult bigcache.Config
+var bigCacheConfRecallResult bigcache.Config
 var tfservingModelVersion int64
 var tfservingTimeout int64
 
-type DeepFM struct {
+type Dssm struct {
 	userId        string
+	retNum        int
 	itemList      []string
 	serviceConfig *service_config_loader.ServiceConfig
 }
 
 func init() {
-	bigCacheConfRankResult = bigcache.Config{
-		Shards:             shards1,
-		LifeWindow:         lifeWindowS1 * time.Minute,
-		CleanWindow:        cleanWindowS1 * time.Minute,
-		MaxEntriesInWindow: maxEntriesInWindow1,
-		MaxEntrySize:       maxEntrySize1,
-		Verbose:            verbose1,
-		HardMaxCacheSize:   hardMaxCacheSize1,
+	bigCacheConfRecallResult = bigcache.Config{
+		Shards:             shards,
+		LifeWindow:         lifeWindowS * time.Minute,
+		CleanWindow:        cleanWindowS * time.Minute,
+		MaxEntriesInWindow: maxEntriesInWindow,
+		MaxEntrySize:       maxEntrySize,
+		Verbose:            verbose,
+		HardMaxCacheSize:   hardMaxCacheSize,
 		OnRemove:           nil,
 		OnRemoveWithReason: nil,
 	}
@@ -50,192 +53,211 @@ func init() {
 }
 
 // userid
-func (d *DeepFM) SetUserId(userId string) {
+func (d *Dssm) SetUserId(userId string) {
 	d.userId = userId
 }
 
-func (d *DeepFM) getUserId() string {
+func (d *Dssm) getUserId() string {
 	return d.userId
 }
 
+// retNum
+func (d *Dssm) SetRetNum(retNum int) {
+	d.retNum = retNum
+}
+
+func (d *Dssm) getRetNum() int {
+	return d.retNum
+}
+
 // itemList
-func (d *DeepFM) SetItemList(itemList []string) {
+func (d *Dssm) SetItemList(itemList []string) {
 	d.itemList = itemList
 }
 
-func (d *DeepFM) getItemList() []string {
+func (d *Dssm) getItemList() []string {
 	return d.itemList
 }
 
 // serviceConfig *service_config.ServiceConfig
-func (d *DeepFM) SetServiceConfig(serviceConfig *service_config_loader.ServiceConfig) {
+func (d *Dssm) SetServiceConfig(serviceConfig *service_config_loader.ServiceConfig) {
 	d.serviceConfig = serviceConfig
 }
 
-func (d *DeepFM) getServiceConfig() *service_config_loader.ServiceConfig {
+func (d *Dssm) getServiceConfig() *service_config_loader.ServiceConfig {
 	return d.serviceConfig
 }
 
-func (d *DeepFM) RankInferSkywalking(r *http.Request) (map[string]interface{}, error) {
+func (d *Dssm) ModelInferSkywalking(r *http.Request) (map[string]interface{}, error) {
 	response := make(map[string]interface{}, 0)
-
-	tensorName := "scores"
-	cacheKeyPrefix := d.userId + d.serviceConfig.GetServiceId() + "_rankResult"
+	cacheKeyPrefix := d.getUserId() + d.serviceConfig.GetServiceId() + "_recallResult"
+	tensorName := "user_embedding"
 
 	//set cache
-	bigCache, err := bigcache.NewBigCache(bigCacheConfRankResult)
+	bigCache, err := bigcache.NewBigCache(bigCacheConfRecallResult)
 	if err != nil {
 		logs.Error(err)
 	}
 
 	// get features from cache.
-	if lifeWindowS1 > 0 {
+	if lifeWindowS > 0 {
 		exampleDataBytes, _ := bigCache.Get(cacheKeyPrefix)
 		err = json.Unmarshal(exampleDataBytes, &response)
 		if err != nil {
-			return nil, err
+			logs.Error(err)
 		}
 		return response, nil
 	}
 
 	//get infer samples.
+	examples := common.ExampleFeatures{}
 	spanUnionEmFv, _, err := common.Tracer.CreateLocalSpan(r.Context())
 	if err != nil {
 		return nil, err
 	}
-	spanUnionEmFv.SetOperationName("get rank infer examples func")
+
+	spanUnionEmFv.SetOperationName("get recall infer examples func")
 	spanUnionEmFv.Log(time.Now())
-	examples, err := d.GetInferExampleFeatures()
+	examples, err = d.GetInferExampleFeatures()
 	if err != nil {
 		return nil, err
 	}
 	spanUnionEmFv.Log(time.Now())
 	spanUnionEmFv.End()
 
-	// get rank scores from tfserving model.
-	items := make([]string, 0)
-	scores := make([]float32, 0)
-	rankResult := make([]*faiss_index.ItemInfo, 0)
+	// get embedding from tfserving model.
+	embeddingVector := make([]float32, 0)
 	spanUnionEmFv, _, err = common.Tracer.CreateLocalSpan(r.Context())
 	if err != nil {
 		return nil, err
 	}
-	spanUnionEmFv.SetOperationName("get rank scores func")
+	spanUnionEmFv.SetOperationName("get recall embedding func")
 	spanUnionEmFv.Log(time.Now())
-	items_, scores_, err := d.rankPredict(examples, tensorName) // d.getServiceConfig().GetModelClient().rankPredict(examples, tensorName)
+
+	embeddingVector_, err := d.embedding(examples, tensorName) // d.getServiceConfig().GetModelConfig().embedding(examples, tensorName)
 	if err != nil {
+		logs.Error(err)
 		return nil, err
 	} else {
-		items = *items_
-		scores = *scores_
+		embeddingVector = *embeddingVector_
 	}
 	spanUnionEmFv.Log(time.Now())
 	spanUnionEmFv.End()
 
-	//build rank result whith tfserving.ItemInfo
-	for idx := 0; idx < len(items); idx++ {
-		itemInfo := &faiss_index.ItemInfo{
-			ItemId: items[idx],
-			Score:  scores[idx],
-		}
-		rankResult = append(rankResult, itemInfo)
+	//request faiss index
+	recallResult := make([]*faiss_index.ItemInfo, 0)
+	spanUnionEmFr, _, err1 := common.Tracer.CreateLocalSpan(r.Context())
+	if err1 != nil {
+		logs.Error(err)
+		return nil, err1
 	}
+	spanUnionEmFr.SetOperationName("get recall faiss index func")
+	spanUnionEmFr.Log(time.Now())
+	recallResult, err = faiss.FaissVectorSearch(d.getServiceConfig().GetFaissIndexConfig(), examples, embeddingVector)
+	if err != nil {
+		logs.Error(err)
+		return nil, err
+	}
+	spanUnionEmFr.Log(time.Now())
+	spanUnionEmFr.End()
 
 	//format result.
 	spanUnionEmOut, _, err := common.Tracer.CreateLocalSpan(r.Context())
 	if err != nil {
 		return nil, err
 	}
-	spanUnionEmOut.SetOperationName("get rank result func")
+	spanUnionEmOut.SetOperationName("get recall result func")
+
 	spanUnionEmOut.Log(time.Now())
-	rankRst, err := d.rankResultFmt(&rankResult)
+	recallRst, err := d.recallResultFmt(&recallResult)
 	if err != nil {
 		return nil, err
 	}
 	spanUnionEmOut.Log(time.Now())
 	spanUnionEmOut.End()
 
-	response["data"] = *rankRst
-	if lifeWindowS1 > 0 {
+	if len(*recallRst) == 0 {
+		logs.Error("recall 0 item, check the faiss index plz. ")
+		return nil, err
+	}
+
+	response["data"] = *recallRst
+
+	if lifeWindowS > 0 {
 		bigCache.Set(cacheKeyPrefix, []byte(utils.Struct2Json(response)))
 	}
 
 	return response, nil
 }
 
-func (d *DeepFM) RankInferNoSkywalking(r *http.Request) (map[string]interface{}, error) {
+func (d *Dssm) ModelInferNoSkywalking(r *http.Request) (map[string]interface{}, error) {
 	response := make(map[string]interface{}, 0)
-	tensorName := "scores"
-	cacheKeyPrefix := d.getUserId() + d.serviceConfig.GetServiceId() + "_rankResult"
+	cacheKeyPrefix := d.getUserId() + d.serviceConfig.GetServiceId() + "_recallResult"
+	tensorName := "user_embedding"
 
 	//set cache
-	bigCache, err := bigcache.NewBigCache(bigCacheConfRankResult)
+	bigCache, err := bigcache.NewBigCache(bigCacheConfRecallResult)
 	if err != nil {
-		logs.Error(err)
+		return nil, err
 	}
 
 	// get features from cache.
-	if lifeWindowS1 > 0 {
+	if lifeWindowS > 0 {
 		exampleDataBytes, _ := bigCache.Get(cacheKeyPrefix)
 		err = json.Unmarshal(exampleDataBytes, &response)
 		if err != nil {
 			return nil, err
 		}
 		return response, nil
-
 	}
 
 	//get infer samples.
-	examples, err := d.GetInferExampleFeatures()
-	if err != nil {
-		return nil, err
-	}
+	examples := common.ExampleFeatures{}
+	examples, err = d.GetInferExampleFeatures()
 
-	// get rank scores from tfserving model.
-	items := make([]string, 0)
-	scores := make([]float32, 0)
-	rankResult := make([]*faiss_index.ItemInfo, 0)
-	items_, scores_, err := d.rankPredict(examples, tensorName) //d.getServiceConfig().GetModelClient().rankPredict(examples, tensorName)
+	// get embedding from tfserving model.
+	embeddingVector := make([]float32, 0)
+	embeddingVector_, err := d.embedding(examples, tensorName) // d.getServiceConfig().GetModelConfig().embedding(examples, tensorName)
 	if err != nil {
-		logs.Error(err)
 		return nil, err
 	} else {
-		items = *items_
-		scores = *scores_
+		embeddingVector = *embeddingVector_
 	}
 
-	//build rank result whith tfserving.ItemInfo
-	for idx := 0; idx < len(items); idx++ {
-		itemInfo := &faiss_index.ItemInfo{
-			ItemId: items[idx],
-			Score:  scores[idx],
-		}
-		rankResult = append(rankResult, itemInfo)
+	//request faiss index
+	recallResult := make([]*faiss_index.ItemInfo, 0)
+	recallResult, err = faiss.FaissVectorSearch(d.getServiceConfig().GetFaissIndexConfig(), examples, embeddingVector)
+	if err != nil {
+		return nil, err
 	}
 
 	//format result.
-	rankRst, err := d.rankResultFmt(&rankResult)
+	recallRst, err := d.recallResultFmt(&recallResult)
 	if err != nil {
 		return nil, err
 	}
 
-	response["data"] = *rankRst
+	if len(*recallRst) == 0 {
+		logs.Error("recall 0 item, check the faiss index plz. ")
+		return nil, err
+	}
 
-	if lifeWindowS1 > 0 {
+	response["data"] = *recallRst
+
+	if lifeWindowS > 0 {
 		bigCache.Set(cacheKeyPrefix, []byte(utils.Struct2Json(response)))
 	}
 
 	return response, nil
 }
 
-func (d *DeepFM) rankResultFmt(rankResult *[]*faiss_index.ItemInfo) (*[]map[string]interface{}, error) {
-
+func (d *Dssm) recallResultFmt(recallResult *[]*faiss_index.ItemInfo) (*[]map[string]interface{}, error) {
 	recall := make([]map[string]interface{}, 0)
-	recallTmp := make(chan map[string]interface{}, len(*rankResult)) // 20221011
+	recallTmp := make(chan map[string]interface{}, len(*recallResult)) // 20221011
 	var wg sync.WaitGroup
 
-	for idx := 0; idx < len(*rankResult); idx++ {
-		rawCell := (*rankResult)[idx]
+	for idx := 0; idx < len(*recallResult); idx++ {
+		rawCell := (*recallResult)[idx]
 		wg.Add(1)
 		go func(raw_cell_ *faiss_index.ItemInfo) {
 			defer wg.Done()
@@ -244,11 +266,9 @@ func (d *DeepFM) rankResultFmt(rankResult *[]*faiss_index.ItemInfo) (*[]map[stri
 			returnCell["score"] = utils.FloatRound(raw_cell_.Score, 4)
 			recallTmp <- returnCell
 		}(rawCell)
-
 	}
 	wg.Wait()
-
-	for idx := 0; idx < len(*rankResult); idx++ {
+	for idx := 0; idx < len(*recallResult); idx++ {
 		returnCellTmp := <-recallTmp
 		recall = append(recall, returnCellTmp)
 	}
@@ -257,45 +277,38 @@ func (d *DeepFM) rankResultFmt(rankResult *[]*faiss_index.ItemInfo) (*[]map[stri
 	return &recall, nil
 }
 
-// request rank scores from tfserving
-func (d *DeepFM) rankPredict(examples common.ExampleFeatures, tensorName string) (*[]string, *[]float32, error) {
+// request embedding vector from tfserving
+func (d *Dssm) embedding(examples common.ExampleFeatures, tensorName string) (*[]float32, error) {
 
 	userExamples := make([][]byte, 0)
 	userContextExamples := make([][]byte, 0)
 	itemExamples := make([][]byte, 0)
-	items := make([]string, 0)
 
 	userExamples = append(userExamples, *(examples.UserExampleFeatures.Buff))
 	userContextExamples = append(userContextExamples, *(examples.UserContextExampleFeatures.Buff))
 
-	for _, itemExample := range *examples.ItemSeqExampleFeatures {
-		items = append(items, *(itemExample.Key))
-		itemExamples = append(itemExamples, *(itemExample.Buff))
-	}
-
-	scores, err := d.RequestTfservering(&userExamples, &userContextExamples, &itemExamples, tensorName)
-
+	response, err := d.requestTfservering(&userExamples, &itemExamples, &userContextExamples, tensorName)
 	if err != nil {
 		logs.Error(err)
-		return nil, nil, err
+		return nil, err
 	}
 
-	return &items, scores, nil
+	return response, nil
 }
 
-func (d *DeepFM) RequestTfservering(userExamples *[][]byte, userContextExamples *[][]byte, itemExamples *[][]byte, tensorName string) (*[]float32, error) {
-	grpcConn, err := d.getServiceConfig().GetModelClient().GetTfservingGrpcPool().Get()
-	defer d.getServiceConfig().GetModelClient().GetTfservingGrpcPool().Put(grpcConn)
+func (d *Dssm) requestTfservering(userExamples *[][]byte, userContextExamples *[][]byte, itemExamples *[][]byte, tensorName string) (*[]float32, error) {
+	grpcConn, err := d.getServiceConfig().GetModelConfig().GetTfservingGrpcPool().Get()
+	defer d.getServiceConfig().GetModelConfig().GetTfservingGrpcPool().Put(grpcConn)
 
 	if err != nil {
 		return nil, err
 	}
-	predictClient := tfserving.NewPredictionServiceClient(grpcConn)
+	predictConfig := tfserving.NewPredictionServiceClient(grpcConn)
 
 	version := &types.Int64Value{Value: tfservingModelVersion}
 	predictRequest := &tfserving.PredictRequest{
 		ModelSpec: &tfserving.ModelSpec{
-			Name:    d.getServiceConfig().GetModelClient().GetModelName(),
+			Name:    d.getServiceConfig().GetModelConfig().GetModelName(),
 			Version: version,
 		},
 		Inputs: make(map[string]*framework.TensorProto),
@@ -351,7 +364,7 @@ func (d *DeepFM) RequestTfservering(userExamples *[][]byte, userContextExamples 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(tfservingTimeout)*time.Millisecond)
 	defer cancel()
 
-	predict, err := predictClient.Predict(ctx, predictRequest)
+	predict, err := predictConfig.Predict(ctx, predictRequest)
 	if err != nil {
 		return nil, err
 	}

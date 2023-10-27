@@ -103,10 +103,10 @@ func (d *DeepFM) GetInferExampleFeatures() (common.ExampleFeatures, error) {
 
 func (d *DeepFM) getUserExampleFeatures() (*common.SeqExampleBuff, error) {
 
-	redisKey := d.getServiceConfig().GetModelClient().GetUserRedisKeyPre() + d.getUserId()
+	redisKey := d.getServiceConfig().GetModelConfig().GetUserRedisKeyPre() + d.getUserId()
 	userExampleFeatsBuff := make([]byte, 0)
 	userSeqExampleBuff := common.SeqExampleBuff{}
-	userExampleFeats, err := d.getServiceConfig().GetRedisClient().GetRedisPool().Get(redisKey)
+	userExampleFeats, err := d.getServiceConfig().GetRedisConfig().GetRedisPool().Get(redisKey)
 	if err != nil {
 		return &userSeqExampleBuff, err
 	} else {
@@ -137,11 +137,11 @@ func (d *DeepFM) getUserContextExampleFeatures() (*common.SeqExampleBuff, error)
 }
 
 func (d *DeepFM) getItemExamplesFeatures() (*[]common.SeqExampleBuff, error) {
-	redisKeyPrefix := d.getServiceConfig().GetModelClient().GetItemRedisKeyPre()
+	redisKeyPrefix := d.getServiceConfig().GetModelConfig().GetItemRedisKeyPre()
 	itemSeqExampleBuffs := make([]common.SeqExampleBuff, 0)
 	for _, itemId := range d.getItemList() {
 		redisKey := redisKeyPrefix + itemId
-		userExampleFeats, err := d.getServiceConfig().GetRedisClient().GetRedisPool().Get(redisKey)
+		userExampleFeats, err := d.getServiceConfig().GetRedisConfig().GetRedisPool().Get(redisKey)
 		itemExampleFeatsBuff := make([]byte, 0)
 		if err != nil {
 			return &itemSeqExampleBuffs, nil
