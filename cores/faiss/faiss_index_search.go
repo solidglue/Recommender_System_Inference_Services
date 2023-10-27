@@ -16,7 +16,7 @@ func init() {
 	flagTensorflow := flagFactory.FlagTensorflowFactory()
 	grpcTimeout = *flagTensorflow.GetTfservingTimeoutMs()
 }
-func FaissVectorSearch(f *faiss_config_loader.FaissIndexClient, example common.ExampleFeatures, vector []float32) ([]*faiss_index.ItemInfo, error) {
+func FaissVectorSearch(f *faiss_config_loader.FaissIndexConfig, example common.ExampleFeatures, vector []float32) ([]*faiss_index.ItemInfo, error) {
 	faissIndexs := f.GetFaissIndexs()
 	faissGrpcConn, err := f.GetFaissGrpcPool().Get()
 	if err != nil {
