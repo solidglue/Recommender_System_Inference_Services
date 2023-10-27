@@ -1,0 +1,1 @@
+#when add new models,such as dssm / deepfm, just implentment the model in cores/model ModelInferInterface.

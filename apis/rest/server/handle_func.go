@@ -21,8 +21,6 @@ var skywalkingPort int
 var skywalkingServerName string
 var NacosIP string
 var NacosPort uint64
-var restRecallInfer restInferInterface
-var restRankInfer restInferInterface
 
 type WorkFunc func(w http.ResponseWriter, r *http.Request)
 type HttpServer struct {
@@ -109,10 +107,9 @@ func RestServerRunner() {
 		"/recall", "/rank",
 	}
 
-	restRecallInfer = &recallServer{}
-	restRankInfer = &rankServer{}
+	restServer := &RestInferService{}
 	workFunHandlers := []WorkFunc{
-		restRecallInfer.restInferServer, restRankInfer.restInferServer,
+		restServer.restInferServer, restServer.restInferServer,
 	}
 
 	httpServer := NewHttpServer()

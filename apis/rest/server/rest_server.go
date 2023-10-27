@@ -3,10 +3,11 @@ package server
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"infer-microservices/apis"
-	"infer-microservices/apis/input_format"
 	"infer-microservices/common/flags"
+	"infer-microservices/cores/model"
 	"infer-microservices/cores/nacos_config_listener"
 	"infer-microservices/cores/service_config_loader"
 	"infer-microservices/utils/logs"
@@ -18,8 +19,9 @@ import (
 )
 
 var lowerRankNum int
+var lowerRecallNum int
 
-type rankServer struct {
+type RestInferService struct {
 }
 
 func init() {
@@ -30,8 +32,8 @@ func init() {
 	lowerRankNum = *flagHystrix.GetHystrixLowerRankNum()
 }
 
-// rank
-func (s *rankServer) restInferServer(w http.ResponseWriter, r *http.Request) {
+// infer
+func (s *RestInferService) restInferServer(w http.ResponseWriter, r *http.Request) {
 
 	defer func() {
 		if info := recover(); info != nil {
@@ -84,7 +86,7 @@ func (s *rankServer) restInferServer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ServiceConfig := apis.ServiceConfigs[request.GetDataId()]
-	response, err := s.restHystrixRanker("restServer", r, &request, ServiceConfig)
+	response, err := s.restHystrixInfer("restServer", r, &request, ServiceConfig)
 	if err != nil {
 		logs.Error(err)
 		panic(err)
@@ -96,11 +98,11 @@ func (s *rankServer) restInferServer(w http.ResponseWriter, r *http.Request) {
 	w.Write(buff)
 }
 
-func (s *rankServer) restHystrixRanker(serverName string, r *http.Request, in *apis.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (map[string]interface{}, error) {
+func (s *RestInferService) restHystrixInfer(serverName string, r *http.Request, in *apis.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (map[string]interface{}, error) {
 	response := make(map[string]interface{}, 0)
 	hystrixErr := hystrix.Do(serverName, func() error {
 		// request recall / rank func.
-		response_, err := s.restRanker(r, in, ServiceConfig)
+		response_, err := s.restInfer(r, in, ServiceConfig)
 		if err != nil {
 			logs.Error(err)
 		} else {
@@ -108,16 +110,16 @@ func (s *rankServer) restHystrixRanker(serverName string, r *http.Request, in *a
 		}
 		return nil
 	}, func(err error) error {
-		// do this when services are timeout.
-		if err != nil {
-			logs.Error(err)
-		}
+		//INFO: do this when services are timeout (hystrix timeout).
+		// less items and simple model.
+
 		itemList := in.GetItemList()
 		in.SetRecallNum(int32(lowerRecallNum))
 		in.SetItemList(itemList[:lowerRankNum])
-		response_, err := s.restRanker(r, in, ServiceConfig)
+		response_, err := s.restInferReduce(r, in, ServiceConfig)
 		if err != nil {
 			logs.Error(err)
+			return err
 		} else {
 			response = response_
 		}
@@ -131,7 +133,7 @@ func (s *rankServer) restHystrixRanker(serverName string, r *http.Request, in *a
 	return response, nil
 }
 
-func (s *rankServer) restRanker(r *http.Request, in *apis.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (map[string]interface{}, error) {
+func (s *RestInferService) restInfer(r *http.Request, in *apis.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (map[string]interface{}, error) {
 	response := make(map[string]interface{}, 0)
 
 	dataId := in.GetDataId()
@@ -155,16 +157,73 @@ func (s *rankServer) restRanker(r *http.Request, in *apis.RecRequest, ServiceCon
 		}
 	}
 
-	ranker := input_format.RankInputFormat{}
-	deepfm, err := ranker.InputCheckAndFormat(in, ServiceConfig)
+	//build model by model_factory
+	modelName := in.GetModelType()
+	if modelName != "" {
+		modelName = strings.ToLower(modelName)
+	}
+
+	modelfactory := model.ModelFactory{}
+	modelinfer, err := modelfactory.CreateInferModel(modelName, in, ServiceConfig)
 	if err != nil {
-		logs.Error(err)
+		return response, err
 	}
 
 	if skywalkingWeatherOpen {
-		response, err = deepfm.RankInferSkywalking(r)
+		response, err = modelinfer.ModelInferSkywalking(r)
 	} else {
-		response, err = deepfm.RankInferNoSkywalking(r)
+		response, err = modelinfer.ModelInferNoSkywalking(r)
+	}
+	if err != nil {
+		logs.Error(err)
+		return response, err
+	}
+
+	return response, nil
+}
+
+func (s *RestInferService) restInferReduce(r *http.Request, in *apis.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (map[string]interface{}, error) {
+	response := make(map[string]interface{}, 0)
+
+	dataId := in.GetDataId()
+	groupId := in.GetGroupId()
+	namespaceId := in.GetNamespaceId()
+
+	nacosConn := nacos_config_listener.NacosConnConfig{}
+	nacosConn.SetDataId(dataId)
+	nacosConn.SetGroupId(groupId)
+	nacosConn.SetNamespaceId(namespaceId)
+	nacosConn.SetIp(NacosIP)
+	nacosConn.SetPort(NacosPort)
+
+	_, ok := apis.NacosListedMap[dataId]
+	if !ok {
+		err := nacosConn.ServiceConfigListen()
+		if err != nil {
+			return response, err
+		} else {
+			apis.NacosListedMap[dataId] = true
+		}
+	}
+
+	//build model by model_factory
+	// modelName := in.GetModelType()
+	// if modelName != "" {
+	// 	modelName = strings.ToLower(modelName)
+	// }
+
+	modelName := "fm" //fm model use to reduce
+
+	modelfactory := model.ModelFactory{}
+	modelinfer, err := modelfactory.CreateInferModel(modelName, in, ServiceConfig)
+	if err != nil {
+		return response, err
+	}
+
+	if skywalkingWeatherOpen {
+		response, err = modelinfer.ModelInferSkywalking(r)
+	} else {
+		response, err = modelinfer.ModelInferNoSkywalking(r)
 	}
 	if err != nil {
 		logs.Error(err)

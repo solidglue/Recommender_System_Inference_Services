@@ -2,15 +2,16 @@ package server
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"infer-microservices/apis"
-	"infer-microservices/apis/input_format"
 	"infer-microservices/common/flags"
+	"infer-microservices/cores/model"
 	"infer-microservices/cores/nacos_config_listener"
 	"infer-microservices/cores/service_config_loader"
+	"infer-microservices/utils"
 	"infer-microservices/utils/logs"
 	"strings"
+	"sync"
 	"time"
 
 	"dubbo.apache.org/dubbo-go/v3/config"
@@ -23,7 +24,8 @@ var ipAddr_ string
 var port_ uint64
 var lowerRecallNum int
 var lowerRankNum int
-var dubboInfer dubboInferInterface
+var inferModel model.ModelInferInterface
+var recallWg sync.WaitGroup
 
 type DubbogoInferService struct {
 }
@@ -39,7 +41,6 @@ func init() {
 	flagHystrix := flagFactory.FlagHystrixFactory()
 	lowerRecallNum = *flagHystrix.GetHystrixLowerRecallNum()
 	lowerRankNum = *flagHystrix.GetHystrixLowerRankNum()
-
 }
 
 //INFO:DONT REMOVE.  JAVA request service need it.
@@ -80,22 +81,6 @@ func (r *DubbogoInferService) DubboRecommendServer(ctx context.Context, in *apis
 	}
 }
 
-func getNacosConn(in *apis.RecRequest) nacos_config_listener.NacosConnConfig {
-	//nacos listen need follow parms.
-	nacosConn := nacos_config_listener.NacosConnConfig{}
-	dataId := in.GetDataId()
-	groupId := in.GetGroupId()
-	namespaceId := in.GetNamespaceId()
-
-	nacosConn.SetDataId(dataId)
-	nacosConn.SetGroupId(groupId)
-	nacosConn.SetNamespaceId(namespaceId)
-	nacosConn.SetIp(ipAddr_)
-	nacosConn.SetPort(port_)
-
-	return nacosConn
-}
-
 func (r *DubbogoInferService) dubboRecommenderServerContext(ctx context.Context, in *apis.RecRequest, respCh chan *apis.RecResponse) {
 	defer func() {
 		if info := recover(); info != nil {
@@ -133,6 +118,22 @@ func (r *DubbogoInferService) dubboRecommenderServerContext(ctx context.Context,
 	respCh <- response
 }
 
+func getNacosConn(in *apis.RecRequest) nacos_config_listener.NacosConnConfig {
+	//nacos listen need follow parms.
+	nacosConn := nacos_config_listener.NacosConnConfig{}
+	dataId := in.GetDataId()
+	groupId := in.GetGroupId()
+	namespaceId := in.GetNamespaceId()
+
+	nacosConn.SetDataId(dataId)
+	nacosConn.SetGroupId(groupId)
+	nacosConn.SetNamespaceId(namespaceId)
+	nacosConn.SetIp(ipAddr_)
+	nacosConn.SetPort(port_)
+
+	return nacosConn
+}
+
 func (r *DubbogoInferService) dubboHystrixServer(serverName string, in *apis.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (*apis.RecResponse, error) {
 	response := &apis.RecResponse{}
 	response.SetCode(404)
@@ -149,15 +150,13 @@ func (r *DubbogoInferService) dubboHystrixServer(serverName string, in *apis.Rec
 		return nil
 	}, func(err error) error {
 		//INFO: do this when services are timeout (hystrix timeout).
-		if err != nil {
-			logs.Error(err)
-			return err
-		}
+		// less items and simple model.
 
+		//INFO:降级和非降级用一个函数，会造成读写冲突
 		itemList := in.GetItemList()
 		in.SetRecallNum(int32(lowerRecallNum))
 		in.SetItemList(itemList[:lowerRankNum])
-		response_, err := r.dubboRecommender(in, ServiceConfig)
+		response_, err := r.dubboRecommenderReduce(in, ServiceConfig)
 		if err != nil {
 			logs.Error(err)
 			return err
@@ -169,6 +168,54 @@ func (r *DubbogoInferService) dubboHystrixServer(serverName string, in *apis.Rec
 
 	if hystrixErr != nil {
 		return response, hystrixErr
+	}
+
+	return response, nil
+}
+
+func (r *DubbogoInferService) dubboRecommender(in *apis.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (*apis.RecResponse, error) {
+	response := &apis.RecResponse{}
+	response.SetCode(404)
+
+	//build model by model_factory
+	modelName := in.GetModelType()
+	if modelName != "" {
+		modelName = strings.ToLower(modelName)
+	}
+
+	modelfactory := model.ModelFactory{}
+	request := getRequestParams(in)
+	modelinfer, err := modelfactory.CreateInferModel(modelName, &request, ServiceConfig)
+	if err != nil {
+		return response, err
+	}
+	//close go2sky in dubbo service .
+	//TODO: get go2sky config from config file.
+	result, err := modelinfer.ModelInferNoSkywalking(nil) // d.dssmm.ModelInferNoSkywalking(nil)
+	if err != nil {
+		return response, err
+	}
+
+	//package infer result.
+	itemsScores := make([]string, 0)
+	resultList := result["data"].([]map[string]interface{})
+	recallCh := make(chan string, len(resultList))
+
+	if len(resultList) > 0 {
+		for i := 0; i < len(resultList); i++ {
+			recallWg.Add(1)
+			go formatRecallResponse(resultList[i], recallCh)
+		}
+
+		recallWg.Wait()
+		close(recallCh)
+		for itemScore := range recallCh {
+			itemsScores = append(itemsScores, itemScore)
+		}
+
+		response.SetCode(200)
+		response.SetMessage("success")
+		response.SetData(itemsScores)
 	}
 
 	return response, nil
@@ -191,46 +238,65 @@ func getRequestParams(in *apis.RecRequest) apis.RecRequest {
 	return request
 }
 
-func (r *DubbogoInferService) dubboRecommender(in *apis.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (*apis.RecResponse, error) {
+func formatRecallResponse(itemScore map[string]interface{}, recallCh chan string) {
+	defer recallWg.Done()
+
+	itemId := itemScore["itemid"].(string)
+	score := float32(itemScore["score"].(float64))
+
+	itemInfo := apis.ItemInfo{}
+	itemInfo.SetItemId(itemId)
+	itemInfo.SetScore(score)
+
+	itemScoreStr := utils.Struct2Json(itemInfo)
+	recallCh <- itemScoreStr
+}
+
+func (r *DubbogoInferService) dubboRecommenderReduce(in *apis.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (*apis.RecResponse, error) {
 	response := &apis.RecResponse{}
 	response.SetCode(404)
 
+	//build model by model_factory
+	// modelName := in.GetModelType()
+	// if modelName != "" {
+	// 	modelName = strings.ToLower(modelName)
+	// }
+
+	modelName := "fm"
+
+	modelfactory := model.ModelFactory{}
 	request := getRequestParams(in)
-	modelType := in.GetModelType()
-	if strings.ToLower(modelType) == "recall" { //recall
-		recaller := input_format.RecallInputFormat{}
-		dssm, err := recaller.InputCheckAndFormat(&request, ServiceConfig)
-		if err != nil {
-			logs.Error(err)
-			return response, err
-		}
-		dubboInfer = &recallServer{dssm}
-		response_, err := dubboInfer.dubboInferServer()
-		if err != nil {
-			logs.Error(err)
-			return response, err
-		} else {
-			response = response_
-		}
-	} else if strings.ToLower(modelType) == "rank" { //rank
-		ranker := input_format.RankInputFormat{}
-		deepfm, err := ranker.InputCheckAndFormat(&request, ServiceConfig)
-		if err != nil {
-			logs.Error(err)
-			return response, err
+	modelinfer, err := modelfactory.CreateInferModel(modelName, &request, ServiceConfig)
+	if err != nil {
+		return response, err
+	}
+	//close go2sky in dubbo service .
+	//TODO: get go2sky config from config file.
+	result, err := modelinfer.ModelInferNoSkywalking(nil) // d.dssmm.ModelInferNoSkywalking(nil)
+	if err != nil {
+		return response, err
+	}
+
+	//package infer result.
+	itemsScores := make([]string, 0)
+	resultList := result["data"].([]map[string]interface{})
+	recallCh := make(chan string, len(resultList))
+
+	if len(resultList) > 0 {
+		for i := 0; i < len(resultList); i++ {
+			recallWg.Add(1)
+			go formatRecallResponse(resultList[i], recallCh)
 		}
 
-		dubboInfer = &rankServer{deepfm}
-		response_, err := dubboInfer.dubboInferServer()
-		if err != nil {
-			logs.Error(err)
-			return response, err
-		} else {
-			response = response_
+		recallWg.Wait()
+		close(recallCh)
+		for itemScore := range recallCh {
+			itemsScores = append(itemsScores, itemScore)
 		}
-	} else {
-		err := errors.New("wrong Strategy")
-		return response, err
+
+		response.SetCode(200)
+		response.SetMessage("success")
+		response.SetData(itemsScores)
 	}
 
 	return response, nil

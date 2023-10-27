@@ -1,17 +1,17 @@
 package server
 
 import (
-	"errors"
 	"fmt"
 	"infer-microservices/common/flags"
+	"infer-microservices/cores/model"
 	"infer-microservices/cores/nacos_config_listener"
 	"infer-microservices/cores/service_config_loader"
 	"strings"
+	"sync"
 	"time"
 
 	"infer-microservices/apis"
 	grpc_api "infer-microservices/apis/grpc/server/api_gogofaster"
-	"infer-microservices/apis/input_format"
 
 	"infer-microservices/utils/logs"
 	"net"
@@ -29,7 +29,7 @@ var lowerRecallNum int
 var lowerRankNum int
 var ipAddr_ string
 var port_ uint64
-var grpcInfer grpcInferInterface
+var inferWg sync.WaitGroup
 
 // server is used to implement customer.CustomerServer.
 type grpcRecommender struct {
@@ -51,7 +51,7 @@ func init() {
 // INFO: implement grpc func which defined by proto.
 func (g *grpcRecommender) GrpcRecommendServer(ctx context.Context, in *grpc_api.RecommendRequest) (*grpc_api.RecommendResponse, error) {
 	//INFO: set timeout by context, degraded service by hystix.
-	resp_info := &grpc_api.RecommendResponse{
+	response := &grpc_api.RecommendResponse{
 		Code: 404,
 	}
 
@@ -65,13 +65,13 @@ func (g *grpcRecommender) GrpcRecommendServer(ctx context.Context, in *grpc_api.
 		case <-ctx.Done():
 			switch ctx.Err() {
 			case context.DeadlineExceeded:
-				return resp_info, ctx.Err()
+				return response, ctx.Err()
 			case context.Canceled:
-				return resp_info, ctx.Err()
+				return response, ctx.Err()
 			}
 		case responseCh := <-respCh:
-			resp_info = responseCh
-			return resp_info, nil
+			response = responseCh
+			return response, nil
 		}
 	}
 }
@@ -155,16 +155,12 @@ func (r *grpcRecommender) grpcHystrixServer(serverName string, in *apis.RecReque
 
 		return nil
 	}, func(err error) error {
-		// do this when services are timeout.
-		if err != nil {
-			logs.Error(err)
-			return err
-		}
-
+		//INFO: do this when services are timeout (hystrix timeout).
+		// less items and simple model.
 		itemList := in.GetItemList()
 		in.SetRecallNum(int32(lowerRecallNum))
 		in.SetItemList(itemList[:lowerRankNum])
-		response_, err := r.grpcRecommender(in, ServiceConfig)
+		response_, err := r.grpcRecommenderReduce(in, ServiceConfig)
 
 		if err != nil {
 			logs.Error(err)
@@ -184,46 +180,129 @@ func (r *grpcRecommender) grpcHystrixServer(serverName string, in *apis.RecReque
 }
 
 func (g *grpcRecommender) grpcRecommender(in *apis.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (*grpc_api.RecommendResponse, error) {
-	resp_info := &grpc_api.RecommendResponse{
+	response := &grpc_api.RecommendResponse{
 		Code: 404,
 	}
 
-	request := apis.RecRequest{}
-	recaller := input_format.RecallInputFormat{}
-	ranker := input_format.RankInputFormat{}
-	modelType := in.GetModelType()
-	if strings.ToLower(modelType) == "recall" {
-		dssm, err := recaller.InputCheckAndFormat(&request, ServiceConfig)
-		if err != nil {
-			logs.Error(err)
-			return nil, err
-		}
-		grpcInfer = &recallServer{dssm}
-		resp_info, err = grpcInfer.grpcInferServer()
-		if err != nil {
-			logs.Error(err)
-			return nil, err
-		}
-	} else if strings.ToLower(modelType) == "rank" {
-		deepfm, err := ranker.InputCheckAndFormat(&request, ServiceConfig)
-		if err != nil {
-			logs.Error(err)
-			return nil, err
-		}
-
-		grpcInfer = &rankServer{deepfm}
-		resp_info, err = grpcInfer.grpcInferServer()
-		if err != nil {
-			logs.Error(err)
-			return nil, err
-		}
-	} else {
-		return resp_info, errors.New("wrong Strategy")
+	//build model by model_factory
+	modelName := in.GetModelType()
+	if modelName != "" {
+		modelName = strings.ToLower(modelName)
 	}
 
-	return resp_info, nil
+	modelfactory := model.ModelFactory{}
+	modelinfer, err := modelfactory.CreateInferModel(modelName, in, ServiceConfig)
+	if err != nil {
+		return response, err
+	}
+
+	var responseTf map[string]interface{}
+	if skywalkingWeatherOpen {
+		responseTf, err = modelinfer.ModelInferSkywalking(nil)
+	} else {
+		responseTf, err = modelinfer.ModelInferNoSkywalking(nil)
+	}
+
+	if err != nil {
+		logs.Error("request tfserving fail:", responseTf)
+		return response, err
+	}
+
+	result := make([]*grpc_api.ItemInfo, 0)
+	resultList := responseTf["data"].([]map[string]interface{})
+	rankCh := make(chan *grpc_api.ItemInfo, len(resultList))
+	for i := 0; i < len(resultList); i++ {
+		inferWg.Add(1)
+		go formatGrpcResponse(resultList[i], rankCh)
+	}
+
+	inferWg.Wait()
+	close(rankCh)
+	for itemScore := range rankCh {
+		result = append(result, itemScore)
+	}
+
+	response = &grpc_api.RecommendResponse{
+		Code:    200,
+		Message: "success",
+		Data: &grpc_api.ItemInfoList{
+			Iteminfo_: result,
+		},
+	}
+
+	return response, nil
 }
 
+func formatGrpcResponse(itemScore map[string]interface{}, rankCh chan *grpc_api.ItemInfo) {
+	defer inferWg.Done()
+
+	itemid := itemScore["itemid"].(string)
+	score := float32(itemScore["score"].(float64))
+	itemInfo := &grpc_api.ItemInfo{
+		Itemid: itemid,
+		Score:  score,
+	}
+
+	rankCh <- itemInfo
+}
+
+func (g *grpcRecommender) grpcRecommenderReduce(in *apis.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (*grpc_api.RecommendResponse, error) {
+	response := &grpc_api.RecommendResponse{
+		Code: 404,
+	}
+
+	//build model by model_factory
+	// modelName := in.GetModelType()
+	// if modelName != "" {
+	// 	modelName = strings.ToLower(modelName)
+	// }
+
+	modelName := "fm"
+
+	modelfactory := model.ModelFactory{}
+	modelinfer, err := modelfactory.CreateInferModel(modelName, in, ServiceConfig)
+	if err != nil {
+		return response, err
+	}
+
+	var responseTf map[string]interface{}
+	if skywalkingWeatherOpen {
+		responseTf, err = modelinfer.ModelInferSkywalking(nil)
+	} else {
+		responseTf, err = modelinfer.ModelInferNoSkywalking(nil)
+	}
+
+	if err != nil {
+		logs.Error("request tfserving fail:", responseTf)
+		return response, err
+	}
+
+	result := make([]*grpc_api.ItemInfo, 0)
+	resultList := responseTf["data"].([]map[string]interface{})
+	rankCh := make(chan *grpc_api.ItemInfo, len(resultList))
+	for i := 0; i < len(resultList); i++ {
+		inferWg.Add(1)
+		go formatGrpcResponse(resultList[i], rankCh)
+	}
+
+	inferWg.Wait()
+	close(rankCh)
+	for itemScore := range rankCh {
+		result = append(result, itemScore)
+	}
+
+	response = &grpc_api.RecommendResponse{
+		Code:    200,
+		Message: "success",
+		Data: &grpc_api.ItemInfoList{
+			Iteminfo_: result,
+		},
+	}
+
+	return response, nil
+}
+
+// runner
 func GrpcServerRunner(nacosIp string, nacosPort uint64) error {
 	ipAddr_ = nacosIp
 	port_ = nacosPort
