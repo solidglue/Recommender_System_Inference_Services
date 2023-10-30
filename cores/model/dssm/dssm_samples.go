@@ -23,7 +23,7 @@ var shards int
 
 func init() {
 	flagFactory := flags.FlagFactory{}
-	flagCache := flagFactory.FlagCacheFactory()
+	flagCache := flagFactory.CreateFlagCache()
 
 	lifeWindowS = time.Duration(*flagCache.GetBigcacheLifeWindowS())
 	cleanWindowS = time.Duration(*flagCache.GetBigcacheCleanWindowS())

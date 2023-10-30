@@ -37,9 +37,9 @@ type grpcRecommender struct {
 
 func init() {
 	flagFactory := flags.FlagFactory{}
-	flagServiceConfig := flagFactory.FlagServiceConfigFactory()
-	flagSkywalking := flagFactory.FlagSkywalkingFactory()
-	flagHystrix := flagFactory.FlagHystrixFactory()
+	flagServiceConfig := flagFactory.CreateFlagServiceConfig()
+	flagSkywalking := flagFactory.CreateFlagSkywalking()
+	flagHystrix := flagFactory.CreateFlagHystrix()
 
 	grpcListenPort = *flagServiceConfig.GetServiceGrpcPort()
 	maxCpuNum = *flagServiceConfig.GetServiceMaxCpuNum()

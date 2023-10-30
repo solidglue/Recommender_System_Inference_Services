@@ -26,7 +26,7 @@ type RestInferService struct {
 
 func init() {
 	flagFactory := flags.FlagFactory{}
-	flagHystrix := flagFactory.FlagHystrixFactory()
+	flagHystrix := flagFactory.CreateFlagHystrix()
 
 	lowerRecallNum = *flagHystrix.GetHystrixLowerRecallNum()
 	lowerRankNum = *flagHystrix.GetHystrixLowerRankNum()

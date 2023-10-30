@@ -18,7 +18,7 @@ type ServiceConfig struct {
 
 func init() {
 	flagFactory := flags.FlagFactory{}
-	flagServiceConfig := flagFactory.FlagServiceConfigFactory()
+	flagServiceConfig := flagFactory.CreateFlagServiceConfig()
 	serviceConfFile = *flagServiceConfig.GetServiceConfigFile()
 }
 

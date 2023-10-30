@@ -10,7 +10,7 @@ func init() {
 }
 
 //start file factory
-func (f *FlagFactory) FlagServiceConfigFactory() *FlagServiceStartInfo {
+func (f *FlagFactory) CreateFlagServiceConfig() *FlagServiceStartInfo {
 	fs := getFlagServiceStartInfoInstance()
 	fs.setServiceConfigFile()
 	fs.setServiceRestPort()
@@ -21,7 +21,7 @@ func (f *FlagFactory) FlagServiceConfigFactory() *FlagServiceStartInfo {
 }
 
 //cache factory
-func (f *FlagFactory) FlagCacheFactory() *flagCache {
+func (f *FlagFactory) CreateFlagCache() *flagCache {
 	fc := getFlagCacheInstance()
 	fc.setBigcacheShards()
 	fc.setBigcacheLifeWindowS()
@@ -35,7 +35,7 @@ func (f *FlagFactory) FlagCacheFactory() *flagCache {
 }
 
 //dubbo factory
-func (f *FlagFactory) FlagDubboFactory() *flagDubbo {
+func (f *FlagFactory) CreateFlagDubbo() *flagDubbo {
 	fd := getFlagDubboInstance()
 	fd.setDubboServiceFile()
 
@@ -43,7 +43,7 @@ func (f *FlagFactory) FlagDubboFactory() *flagDubbo {
 }
 
 //dystrix factory
-func (f *FlagFactory) FlagHystrixFactory() *flagsHystrix {
+func (f *FlagFactory) CreateFlagHystrix() *flagsHystrix {
 	fh := getFlagsHystrixInstance()
 	fh.setHystrixErrorPercentThreshold()
 	fh.setHystrixLowerRankNum()
@@ -57,7 +57,7 @@ func (f *FlagFactory) FlagHystrixFactory() *flagsHystrix {
 }
 
 //logs factory
-func (f *FlagFactory) FlagLogFactory() *flagsLog {
+func (f *FlagFactory) CreateFlagLog() *flagsLog {
 	fl := getFlagLogInstance()
 	fl.setLogFileName()
 	fl.setLogLevel()
@@ -68,7 +68,7 @@ func (f *FlagFactory) FlagLogFactory() *flagsLog {
 }
 
 //nacos factory
-func (f *FlagFactory) FlagNacosFactory() *flagsNacos {
+func (f *FlagFactory) CreateFlagNacos() *flagsNacos {
 	fn := getFlagsNacosInstance()
 	fn.setNacosIp()
 	fn.setNacosPort()
@@ -83,7 +83,7 @@ func (f *FlagFactory) FlagNacosFactory() *flagsNacos {
 }
 
 //redis factory
-func (f *FlagFactory) FlagRedisFactory() *FlagRedis {
+func (f *FlagFactory) CreateFlagRedis() *FlagRedis {
 	fd := getFlagRedisInstance()
 	fd.setRedisPassword()
 
@@ -91,7 +91,7 @@ func (f *FlagFactory) FlagRedisFactory() *FlagRedis {
 }
 
 //skywalking factory
-func (f *FlagFactory) FlagSkywalkingFactory() *flagsSkywalking {
+func (f *FlagFactory) CreateFlagSkywalking() *flagsSkywalking {
 	fs := getFlagsSkywalkingInstance()
 	fs.setSkywalkingWhetheropen()
 	fs.setSkywalkingIp()
@@ -102,7 +102,7 @@ func (f *FlagFactory) FlagSkywalkingFactory() *flagsSkywalking {
 }
 
 //tensorflow factory
-func (f *FlagFactory) FlagTensorflowFactory() *flagTensorflow {
+func (f *FlagFactory) CreateFlagTensorflow() *flagTensorflow {
 	ft := getFlagTensorflowInstance()
 	ft.setTfservingModelVersion()
 	ft.setTfservingTimeoutMs()

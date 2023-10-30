@@ -30,8 +30,8 @@ type HttpServer struct {
 
 func init() {
 	flagFactory := flags.FlagFactory{}
-	flagServiceConfig := flagFactory.FlagServiceConfigFactory()
-	flagSkywalking := flagFactory.FlagSkywalkingFactory()
+	flagServiceConfig := flagFactory.CreateFlagServiceConfig()
+	flagSkywalking := flagFactory.CreateFlagSkywalking()
 
 	restListenPort = *flagServiceConfig.GetServiceRestPort()
 	maxCpuNum = *flagServiceConfig.GetServiceMaxCpuNum()

@@ -14,7 +14,7 @@ var hystrixErrorPercentThreshold int
 
 func init() {
 	flagFactory := flags.FlagFactory{}
-	flagHystrix := flagFactory.FlagHystrixFactory()
+	flagHystrix := flagFactory.CreateFlagHystrix()
 
 	timeout := *flagHystrix.GetHystrixTimeoutMs()
 	maxConcurrentRequests := *flagHystrix.GetHystrixMaxConcurrentRequests()

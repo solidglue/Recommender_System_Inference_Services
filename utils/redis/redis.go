@@ -18,7 +18,7 @@ type InferRedisClient struct {
 
 func init() {
 	flagFactory := flags.FlagFactory{}
-	flagRedis := flagFactory.FlagRedisFactory()
+	flagRedis := flagFactory.CreateFlagRedis()
 	password = *flagRedis.GetRedisPassword()
 }
 

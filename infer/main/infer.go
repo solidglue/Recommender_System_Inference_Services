@@ -15,8 +15,8 @@ var nacosPort uint64
 
 func init() {
 	flagFactory := flags.FlagFactory{}
-	flagDubbo := flagFactory.FlagDubboFactory()
-	flagNacos := flagFactory.FlagNacosFactory()
+	flagDubbo := flagFactory.CreateFlagDubbo()
+	flagNacos := flagFactory.CreateFlagNacos()
 
 	dubboConf = *flagDubbo.GetDubboServiceFile()
 	nacosIp = *flagNacos.GetNacosIp()

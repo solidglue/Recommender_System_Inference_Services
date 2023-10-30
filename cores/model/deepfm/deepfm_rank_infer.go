@@ -44,7 +44,7 @@ func init() {
 	}
 
 	flagFactory := flags.FlagFactory{}
-	flagTensorflow := flagFactory.FlagTensorflowFactory()
+	flagTensorflow := flagFactory.CreateFlagTensorflow()
 
 	tfservingModelVersion = *flagTensorflow.GetTfservingModelVersion()
 	tfservingTimeout = *flagTensorflow.GetTfservingTimeoutMs()

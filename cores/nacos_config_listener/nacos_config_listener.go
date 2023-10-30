@@ -31,7 +31,7 @@ type NacosConnConfig struct {
 
 func init() {
 	flagFactory := flags.FlagFactory{}
-	flagNacos := flagFactory.FlagNacosFactory()
+	flagNacos := flagFactory.CreateFlagNacos()
 
 	nacosTimeoutMs = uint64(*flagNacos.GetNacosTimeoutMs())
 	nacosLogDir = *flagNacos.GetNacosLogdir()

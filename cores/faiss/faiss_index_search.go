@@ -13,7 +13,7 @@ var grpcTimeout int64
 
 func init() {
 	flagFactory := flags.FlagFactory{}
-	flagTensorflow := flagFactory.FlagTensorflowFactory()
+	flagTensorflow := flagFactory.CreateFlagTensorflow()
 	grpcTimeout = *flagTensorflow.GetTfservingTimeoutMs()
 }
 func FaissVectorSearch(f *faiss_config_loader.FaissIndexConfig, example common.ExampleFeatures, vector []float32) ([]*faiss_index.ItemInfo, error) {

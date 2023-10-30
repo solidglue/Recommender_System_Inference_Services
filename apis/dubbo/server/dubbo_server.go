@@ -38,7 +38,7 @@ func init() {
 
 	//get hystrix parms.
 	flagFactory := flags.FlagFactory{}
-	flagHystrix := flagFactory.FlagHystrixFactory()
+	flagHystrix := flagFactory.CreateFlagHystrix()
 	lowerRecallNum = *flagHystrix.GetHystrixLowerRecallNum()
 	lowerRankNum = *flagHystrix.GetHystrixLowerRankNum()
 }

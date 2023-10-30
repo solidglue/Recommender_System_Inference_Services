@@ -21,7 +21,7 @@ var bigCacheConfRankSamples bigcache.Config
 
 func init() {
 	flagFactory := flags.FlagFactory{}
-	flagCache := flagFactory.FlagCacheFactory()
+	flagCache := flagFactory.CreateFlagCache()
 
 	lifeWindowS1 = time.Duration(*flagCache.GetBigcacheLifeWindowS())
 	cleanWindowS1 = time.Duration(*flagCache.GetBigcacheCleanWindowS())
