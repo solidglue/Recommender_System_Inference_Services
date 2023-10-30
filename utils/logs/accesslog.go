@@ -68,7 +68,7 @@ func AccessLog(r *AccessLogRecord, format string) {
 	switch format {
 
 	case apacheFormat:
-		timeFormatted := r.RequestTime.Format("02/Jan/2006 03:04:05")
+		timeFormatted := r.RequestTime.Format("02/Jan/2014 00:00:00")
 		msg = fmt.Sprintf(apacheFormatPattern, r.RemoteAddr, timeFormatted, r.Request, r.Status, r.BodyBytesSent,
 			r.ElapsedTime.Seconds(), r.HTTPReferrer, r.HTTPUserAgent)
 	case jsonFormat:

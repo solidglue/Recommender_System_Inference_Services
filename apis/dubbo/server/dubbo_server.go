@@ -248,7 +248,7 @@ func formatRecallResponse(itemScore map[string]interface{}, recallCh chan string
 	itemInfo.SetItemId(itemId)
 	itemInfo.SetScore(score)
 
-	itemScoreStr := utils.Struct2Json(itemInfo)
+	itemScoreStr := utils.ConvertStructToJson(itemInfo)
 	recallCh <- itemScoreStr
 }
 

@@ -167,7 +167,7 @@ func (d *DeepFM) ModelInferSkywalking(r *http.Request) (map[string]interface{}, 
 
 	response["data"] = *rankRst
 	if lifeWindowS1 > 0 {
-		bigCache.Set(cacheKeyPrefix, []byte(utils.Struct2Json(response)))
+		bigCache.Set(cacheKeyPrefix, []byte(utils.ConvertStructToJson(response)))
 	}
 
 	return response, nil
@@ -232,7 +232,7 @@ func (d *DeepFM) ModelInferNoSkywalking(r *http.Request) (map[string]interface{}
 	response["data"] = *rankRst
 
 	if lifeWindowS1 > 0 {
-		bigCache.Set(cacheKeyPrefix, []byte(utils.Struct2Json(response)))
+		bigCache.Set(cacheKeyPrefix, []byte(utils.ConvertStructToJson(response)))
 	}
 
 	return response, nil

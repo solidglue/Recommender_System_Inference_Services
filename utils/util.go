@@ -12,33 +12,17 @@ func FloatRound(f float32, n int) float64 {
 	return res
 }
 
-func Struct2Json(param interface{}) string {
+func ConvertStructToJson(param interface{}) string {
 	dataType, _ := json.Marshal(param)
 	dataString := string(dataType)
 	return dataString
 }
 
-func Json2Struct(str string) map[string]interface{} {
+func ConvertJsonToStruct(jsonStr string) map[string]interface{} {
 	var tempMap map[string]interface{}
 	var err error
-
-	if str != "" {
-		err = json.Unmarshal([]byte(str), &tempMap)
-		if err != nil {
-			panic(err)
-		}
-	} else {
-		tempMap = make(map[string]interface{}, 0)
-	}
-
-	return tempMap
-}
-
-func Json2Map(str string) map[string]interface{} {
-	var tempMap map[string]interface{}
-	var err error
-	if str != "" {
-		err = json.Unmarshal([]byte(str), &tempMap)
+	if jsonStr != "" {
+		err = json.Unmarshal([]byte(jsonStr), &tempMap)
 		if err != nil {
 			panic(err)
 		}

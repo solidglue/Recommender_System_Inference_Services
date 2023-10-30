@@ -95,7 +95,7 @@ func (d *DeepFM) GetInferExampleFeatures() (common.ExampleFeatures, error) {
 	}
 
 	if lifeWindowS1 > 0 {
-		bigCache.Set(cacheKeyPrefix, []byte(utils.Struct2Json(exampleData)))
+		bigCache.Set(cacheKeyPrefix, []byte(utils.ConvertStructToJson(exampleData)))
 	}
 
 	return exampleData, nil

@@ -97,7 +97,7 @@ func (d *Dssm) GetInferExampleFeatures() (common.ExampleFeatures, error) {
 
 	if lifeWindowS > 0 {
 		// goCache.Set(cacheKeyPrefix, &exampleData, cacheTimeSecond)
-		bigCache.Set(cacheKeyPrefix, []byte(utils.Struct2Json(exampleData)))
+		bigCache.Set(cacheKeyPrefix, []byte(utils.ConvertStructToJson(exampleData)))
 	}
 
 	return exampleData, nil

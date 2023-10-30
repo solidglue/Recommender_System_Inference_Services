@@ -65,7 +65,7 @@ func (f *ModelConfig) GetItemRedisKeyPre() string {
 // model conf load
 func (m *ModelConfig) ConfigLoad(domain string, dataId string, modelConfStr string) error {
 
-	dataConf := utils.Json2Map(modelConfStr)
+	dataConf := utils.ConvertJsonToStruct(modelConfStr)
 	for tmpModelName_, tmpModelConf_ := range dataConf { // only 1 model
 
 		modelConfTmp := tmpModelConf_.(map[string]interface{})

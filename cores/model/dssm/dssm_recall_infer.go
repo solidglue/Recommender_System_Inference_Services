@@ -184,7 +184,7 @@ func (d *Dssm) ModelInferSkywalking(r *http.Request) (map[string]interface{}, er
 	response["data"] = *recallRst
 
 	if lifeWindowS > 0 {
-		bigCache.Set(cacheKeyPrefix, []byte(utils.Struct2Json(response)))
+		bigCache.Set(cacheKeyPrefix, []byte(utils.ConvertStructToJson(response)))
 	}
 
 	return response, nil
@@ -245,7 +245,7 @@ func (d *Dssm) ModelInferNoSkywalking(r *http.Request) (map[string]interface{}, 
 	response["data"] = *recallRst
 
 	if lifeWindowS > 0 {
-		bigCache.Set(cacheKeyPrefix, []byte(utils.Struct2Json(response)))
+		bigCache.Set(cacheKeyPrefix, []byte(utils.ConvertStructToJson(response)))
 	}
 
 	return response, nil
