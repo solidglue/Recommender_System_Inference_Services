@@ -1,9 +1,5 @@
 package flags
 
-import (
-	"flag"
-)
-
 var flagServiceStartInfoInstance *FlagServiceStartInfo
 
 type FlagServiceStartInfo struct {
@@ -23,9 +19,8 @@ func getFlagServiceStartInfoInstance() *FlagServiceStartInfo {
 }
 
 // service_start_file
-func (s *FlagServiceStartInfo) setServiceConfigFile() {
-	conf := flag.String("service_start_file", "./conf/service_conf_file.json", "")
-	s.serviceConfig = conf
+func (s *FlagServiceStartInfo) setServiceConfigFile(serviceConfig *string) {
+	s.serviceConfig = serviceConfig
 }
 
 func (s *FlagServiceStartInfo) GetServiceConfigFile() *string {
@@ -33,9 +28,8 @@ func (s *FlagServiceStartInfo) GetServiceConfigFile() *string {
 }
 
 // rest_server_port
-func (s *FlagServiceStartInfo) setServiceRestPort() {
-	conf := flag.Uint("rest_server_port", 8888, "")
-	s.restPort = conf
+func (s *FlagServiceStartInfo) setServiceRestPort(restPort *uint) {
+	s.restPort = restPort
 }
 
 func (s *FlagServiceStartInfo) GetServiceRestPort() *uint {
@@ -43,9 +37,8 @@ func (s *FlagServiceStartInfo) GetServiceRestPort() *uint {
 }
 
 // grpc_server_port
-func (s *FlagServiceStartInfo) setServiceGrpcPort() {
-	conf := flag.Uint("grpc_server_port", 8889, "")
-	s.grpcPort = conf
+func (s *FlagServiceStartInfo) setServiceGrpcPort(grpcPort *uint) {
+	s.grpcPort = grpcPort
 }
 
 func (s *FlagServiceStartInfo) GetServiceGrpcPort() *uint {
@@ -53,9 +46,8 @@ func (s *FlagServiceStartInfo) GetServiceGrpcPort() *uint {
 }
 
 // max_cpu_num
-func (s *FlagServiceStartInfo) setServiceMaxCpuNum() {
-	conf := flag.Int("max_cpu_num", 16, "")
-	s.maxCpuNum = conf
+func (s *FlagServiceStartInfo) setServiceMaxCpuNum(maxCpuNum *int) {
+	s.maxCpuNum = maxCpuNum
 }
 
 func (s *FlagServiceStartInfo) GetServiceMaxCpuNum() *int {

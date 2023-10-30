@@ -1,7 +1,5 @@
 package flags
 
-import "flag"
-
 var flagsHystrixInstance *flagsHystrix
 
 type flagsHystrix struct {
@@ -25,9 +23,8 @@ func getFlagsHystrixInstance() *flagsHystrix {
 }
 
 // hystrix_timeoutMS
-func (s *flagsHystrix) setHystrixTimeoutMs() {
-	conf := flag.Int("hystrix_timeoutMS", 100, "")
-	s.hystrixTimeoutMs = conf
+func (s *flagsHystrix) setHystrixTimeoutMs(hystrixTimeoutMs *int) {
+	s.hystrixTimeoutMs = hystrixTimeoutMs
 }
 
 func (s *flagsHystrix) GetHystrixTimeoutMs() *int {
@@ -35,9 +32,8 @@ func (s *flagsHystrix) GetHystrixTimeoutMs() *int {
 }
 
 // hystrix_MaxConcurrentRequests
-func (s *flagsHystrix) setHystrixMaxConcurrentRequests() {
-	conf := flag.Int("hystrix_timeoutMS", 10000, "")
-	s.hystrixMaxConcurrentRequests = conf
+func (s *flagsHystrix) setHystrixMaxConcurrentRequests(hystrixMaxConcurrentRequests *int) {
+	s.hystrixMaxConcurrentRequests = hystrixMaxConcurrentRequests
 }
 
 func (s *flagsHystrix) GetHystrixMaxConcurrentRequests() *int {
@@ -45,9 +41,8 @@ func (s *flagsHystrix) GetHystrixMaxConcurrentRequests() *int {
 }
 
 // hystrix_RequestVolumeThreshold
-func (s *flagsHystrix) setHystrixRequestVolumeThreshold() {
-	conf := flag.Int("hystrix_RequestVolumeThreshold", 50000, "")
-	s.hystrixRequestVolumeThreshold = conf
+func (s *flagsHystrix) setHystrixRequestVolumeThreshold(hystrixRequestVolumeThreshold *int) {
+	s.hystrixRequestVolumeThreshold = hystrixRequestVolumeThreshold
 }
 
 func (s *flagsHystrix) GetHystrixRequestVolumeThreshold() *int {
@@ -55,9 +50,8 @@ func (s *flagsHystrix) GetHystrixRequestVolumeThreshold() *int {
 }
 
 // hystrix_timeoutMS
-func (s *flagsHystrix) setHystrixSleepWindow() {
-	conf := flag.Int("hystrix_SleepWindow", 10000, "")
-	s.hystrixSleepWindow = conf
+func (s *flagsHystrix) setHystrixSleepWindow(hystrixSleepWindow *int) {
+	s.hystrixSleepWindow = hystrixSleepWindow
 }
 
 func (s *flagsHystrix) GetHystrixSleepWindow() *int {
@@ -65,19 +59,17 @@ func (s *flagsHystrix) GetHystrixSleepWindow() *int {
 }
 
 // hystrix_ErrorPercentThreshold
-func (s *flagsHystrix) setHystrixErrorPercentThreshold() {
-	conf := flag.Int("hystrix_ErrorPercentThreshold", 5, "")
-	s.hystrixTimeoutMs = conf
+func (s *flagsHystrix) setHystrixErrorPercentThreshold(hystrixErrorPercentThreshold *int) {
+	s.hystrixErrorPercentThreshold = hystrixErrorPercentThreshold
 }
 
 func (s *flagsHystrix) GetHystrixErrorPercentThreshold() *int {
-	return s.hystrixTimeoutMs
+	return s.hystrixErrorPercentThreshold
 }
 
 // hystrix_lowerRecallNum
-func (s *flagsHystrix) setHystrixLowerRecallNum() {
-	conf := flag.Int("hystrix_lowerRecallNum", 100, "")
-	s.hystrixLowerRecallNum = conf
+func (s *flagsHystrix) setHystrixLowerRecallNum(hystrixLowerRecallNum *int) {
+	s.hystrixLowerRecallNum = hystrixLowerRecallNum
 }
 
 func (s *flagsHystrix) GetHystrixLowerRecallNum() *int {
@@ -85,9 +77,8 @@ func (s *flagsHystrix) GetHystrixLowerRecallNum() *int {
 }
 
 // hystrix_lowerRankNum
-func (s *flagsHystrix) setHystrixLowerRankNum() {
-	conf := flag.Int("hystrix_lowerRankNum", 100, "")
-	s.hystrixLowerRankNum = conf
+func (s *flagsHystrix) setHystrixLowerRankNum(hystrixLowerRankNum *int) {
+	s.hystrixLowerRankNum = hystrixLowerRankNum
 }
 
 func (s *flagsHystrix) GetHystrixLowerRankNum() *int {

@@ -1,7 +1,5 @@
 package flags
 
-import "flag"
-
 var flagsLogInstance *flagsLog
 
 type flagsLog struct {
@@ -22,9 +20,8 @@ func getFlagLogInstance() *flagsLog {
 }
 
 // log_max_size
-func (s *flagsLog) setLogMaxSize() {
-	conf := flag.Int("log_max_size", 200000000, "the max size of the log file (in Byte)")
-	s.logMaxSize = conf
+func (s *flagsLog) setLogMaxSize(logMaxSize *int) {
+	s.logMaxSize = logMaxSize
 }
 
 func (s *flagsLog) GetLogMaxSize() *int {
@@ -32,9 +29,8 @@ func (s *flagsLog) GetLogMaxSize() *int {
 }
 
 // log_save_days
-func (s *flagsLog) setLogSaveDays() {
-	conf := flag.Int("log_save_days", 7, "")
-	s.logSaveDays = conf
+func (s *flagsLog) setLogSaveDays(logSaveDays *int) {
+	s.logSaveDays = logSaveDays
 }
 
 func (s *flagsLog) GetLogSaveDays() *int {
@@ -42,9 +38,8 @@ func (s *flagsLog) GetLogSaveDays() *int {
 }
 
 // log_file_name
-func (s *flagsLog) setLogFileName() {
-	conf := flag.String("log_file_name", "infer.log", "")
-	s.logFileName = conf
+func (s *flagsLog) setLogFileName(logFileName *string) {
+	s.logFileName = logFileName
 }
 
 func (s *flagsLog) GetLogFileName() *string {
@@ -52,9 +47,8 @@ func (s *flagsLog) GetLogFileName() *string {
 }
 
 // log_level
-func (s *flagsLog) setLogLevel() {
-	conf := flag.String("log_level", "error", "the log level, (debug, info, error, fatal)")
-	s.logLevel = conf
+func (s *flagsLog) setLogLevel(logLevel *string) {
+	s.logLevel = logLevel
 }
 
 func (s *flagsLog) GetLogLevel() *string {

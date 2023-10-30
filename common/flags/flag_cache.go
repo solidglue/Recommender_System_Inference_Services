@@ -1,7 +1,5 @@
 package flags
 
-import "flag"
-
 var flagCacheInstance *flagCache
 
 type flagCache struct {
@@ -15,7 +13,7 @@ type flagCache struct {
 	bigcacheVerbose            *bool
 }
 
-//singleton instance
+// singleton instance
 func init() {
 	flagCacheInstance = new(flagCache)
 }
@@ -25,9 +23,8 @@ func getFlagCacheInstance() *flagCache {
 }
 
 // bigcahe_shards
-func (s *flagCache) setBigcacheShards() {
-	conf := flag.Int("bigcahe_shards", 1024, "")
-	s.bigcacheShards = conf
+func (s *flagCache) setBigcacheShards(bigcacheShards *int) {
+	s.bigcacheShards = bigcacheShards
 }
 
 func (s *flagCache) GetBigcacheShards() *int {
@@ -35,9 +32,8 @@ func (s *flagCache) GetBigcacheShards() *int {
 }
 
 // bigcahe_lifeWindowS
-func (s *flagCache) setBigcacheLifeWindowS() {
-	conf := flag.Int("bigcahe_lifeWindowS", 300, "")
-	s.bigcacheLifeWindowS = conf
+func (s *flagCache) setBigcacheLifeWindowS(bigcacheLifeWindowS *int) {
+	s.bigcacheLifeWindowS = bigcacheLifeWindowS
 }
 
 func (s *flagCache) GetBigcacheLifeWindowS() *int {
@@ -45,9 +41,8 @@ func (s *flagCache) GetBigcacheLifeWindowS() *int {
 }
 
 // bigcache_cleanWindowS
-func (s *flagCache) setBigcacheCleanWindowS() {
-	conf := flag.Int("bigcache_cleanWindowS", 120, "")
-	s.bigcacheCleanWindowS = conf
+func (s *flagCache) setBigcacheCleanWindowS(bigcacheCleanWindowS *int) {
+	s.bigcacheCleanWindowS = bigcacheCleanWindowS
 }
 
 func (s *flagCache) GetBigcacheCleanWindowS() *int {
@@ -55,19 +50,17 @@ func (s *flagCache) GetBigcacheCleanWindowS() *int {
 }
 
 // bigcache_hardMaxCacheSize
-func (s *flagCache) setBigcacheHardMaxCacheSize() {
-	conf := flag.Int("bigcache_hardMaxCacheSize", 409600, "MB")
-	s.bigcacheHardMaxCacheSize = conf
+func (s *flagCache) setBigcacheHardMaxCacheSize(bigcacheHardMaxCacheSize *int) {
+	s.bigcacheHardMaxCacheSize = bigcacheHardMaxCacheSize
 }
 
 func (s *flagCache) GetBigcacheHardMaxCacheSize() *int {
 	return s.bigcacheHardMaxCacheSize
 }
 
-//bigcache_maxEntrySize
-func (s *flagCache) setBigcacheMaxEntrySize() {
-	conf := flag.Int("bigcache_maxEntrySize", 1024, "byte")
-	s.bigcacheMaxEntrySize = conf
+// bigcache_maxEntrySize
+func (s *flagCache) setBigcacheMaxEntrySize(bigcacheMaxEntrySize *int) {
+	s.bigcacheMaxEntrySize = bigcacheMaxEntrySize
 }
 
 func (s *flagCache) GetBigcacheMaxEntrySize() *int {
@@ -75,9 +68,8 @@ func (s *flagCache) GetBigcacheMaxEntrySize() *int {
 }
 
 // bigcache_maxEntriesInWindow
-func (s *flagCache) setBigcacheMaxEntriesInWindow() {
-	conf := flag.Int("bigcache_maxEntriesInWindow", 2000000, "depends on tps")
-	s.bigcacheMaxEntriesInWindow = conf
+func (s *flagCache) setBigcacheMaxEntriesInWindow(bigcacheMaxEntriesInWindow *int) {
+	s.bigcacheMaxEntriesInWindow = bigcacheMaxEntriesInWindow
 }
 
 func (s *flagCache) GetBigcacheMaxEntriesInWindow() *int {
@@ -85,9 +77,8 @@ func (s *flagCache) GetBigcacheMaxEntriesInWindow() *int {
 }
 
 // bigcache_verbose
-func (s *flagCache) setBigcacheVerbose() {
-	conf := flag.Bool("bigcache_verbose", false, "")
-	s.bigcacheVerbose = conf
+func (s *flagCache) setBigcacheVerbose(bigcacheVerbose *bool) {
+	s.bigcacheVerbose = bigcacheVerbose
 }
 
 func (s *flagCache) GetBigcacheVerbose() *bool {

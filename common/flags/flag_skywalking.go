@@ -1,7 +1,5 @@
 package flags
 
-import "flag"
-
 var flagsSkywalkingInstance *flagsSkywalking
 
 type flagsSkywalking struct {
@@ -21,9 +19,8 @@ func getFlagsSkywalkingInstance() *flagsSkywalking {
 }
 
 // skywalking_whetheropen
-func (s *flagsSkywalking) setSkywalkingWhetheropen() {
-	conf := flag.Bool("skywalking_whetheropen", false, "")
-	s.skywalkingWhetheropen = conf
+func (s *flagsSkywalking) setSkywalkingWhetheropen(skywalkingWhetheropen *bool) {
+	s.skywalkingWhetheropen = skywalkingWhetheropen
 }
 
 func (s *flagsSkywalking) GetSkywalkingWhetheropen() *bool {
@@ -31,9 +28,8 @@ func (s *flagsSkywalking) GetSkywalkingWhetheropen() *bool {
 }
 
 // skywalking_servername
-func (s *flagsSkywalking) setSkywalkingServername() {
-	conf := flag.String("skywalking_servername", "infer", "")
-	s.skywalkingServername = conf
+func (s *flagsSkywalking) setSkywalkingServername(skywalkingServername *string) {
+	s.skywalkingServername = skywalkingServername
 }
 
 func (s *flagsSkywalking) GetSkywalkingServername() *string {
@@ -41,9 +37,8 @@ func (s *flagsSkywalking) GetSkywalkingServername() *string {
 }
 
 // skywalking_ip
-func (s *flagsSkywalking) setSkywalkingIp() {
-	conf := flag.String("skywalking_ip", "10.10.10.10", "")
-	s.skywalkingIp = conf
+func (s *flagsSkywalking) setSkywalkingIp(skywalkingIp *string) {
+	s.skywalkingIp = skywalkingIp
 }
 
 func (s *flagsSkywalking) GetSkywalkingIp() *string {
@@ -51,9 +46,8 @@ func (s *flagsSkywalking) GetSkywalkingIp() *string {
 }
 
 // skywalking_port
-func (s *flagsSkywalking) setSkywalkingPort() {
-	conf := flag.Int("skywalking_port", 8080, "")
-	s.skywalkingPort = conf
+func (s *flagsSkywalking) setSkywalkingPort(skywalkingPort *int) {
+	s.skywalkingPort = skywalkingPort
 }
 
 func (s *flagsSkywalking) GetSkywalkingPort() *int {

@@ -1,14 +1,12 @@
 package flags
 
-import "flag"
-
 var flagDubboInstance *flagDubbo
 
 type flagDubbo struct {
 	dubboServiceFile *string
 }
 
-//INFO: singleton instance
+// INFO: singleton instance
 func init() {
 	flagDubboInstance = new(flagDubbo)
 }
@@ -18,9 +16,8 @@ func getFlagDubboInstance() *flagDubbo {
 }
 
 // dubbo_serverconf
-func (s *flagDubbo) setDubboServiceFile() {
-	conf := flag.String("dubbo_serverconf", "conf/dubbogo_server.yml", "")
-	s.dubboServiceFile = conf
+func (s *flagDubbo) setDubboServiceFile(dubboServiceFile *string) {
+	s.dubboServiceFile = dubboServiceFile
 }
 
 func (s *flagDubbo) GetDubboServiceFile() *string {

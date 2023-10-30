@@ -1,7 +1,5 @@
 package flags
 
-import "flag"
-
 var flagTensorflowInstance *flagTensorflow
 
 type flagTensorflow struct {
@@ -20,9 +18,8 @@ func getFlagTensorflowInstance() *flagTensorflow {
 }
 
 // tfserving_model_version
-func (s *flagTensorflow) setTfservingModelVersion() {
-	conf := flag.Int64("tfserving_model_version", 0, "")
-	s.tfservingModelVersion = conf
+func (s *flagTensorflow) setTfservingModelVersion(tfservingModelVersion *int64) {
+	s.tfservingModelVersion = tfservingModelVersion
 }
 
 func (s *flagTensorflow) GetTfservingModelVersion() *int64 {
@@ -30,9 +27,8 @@ func (s *flagTensorflow) GetTfservingModelVersion() *int64 {
 }
 
 // tfserving_model_version
-func (s *flagTensorflow) setTfservingTimeoutMs() {
-	conf := flag.Int64("tfserving_timeoutms", 100, "")
-	s.tfservingTimeoutMs = conf
+func (s *flagTensorflow) setTfservingTimeoutMs(tfservingTimeoutMs *int64) {
+	s.tfservingTimeoutMs = tfservingTimeoutMs
 }
 
 func (s *flagTensorflow) GetTfservingTimeoutMs() *int64 {

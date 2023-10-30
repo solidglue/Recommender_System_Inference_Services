@@ -1,7 +1,5 @@
 package flags
 
-import "flag"
-
 var flagRedisInstance *FlagRedis
 
 type FlagRedis struct {
@@ -19,9 +17,8 @@ func getFlagRedisInstance() *FlagRedis {
 }
 
 // redis_password
-func (s *FlagRedis) setRedisPassword() {
-	conf := flag.String("redis_password", "", "")
-	s.redisPassword = conf
+func (s *FlagRedis) setRedisPassword(redisPassword *string) {
+	s.redisPassword = redisPassword
 }
 
 func (s *FlagRedis) GetRedisPassword() *string {
