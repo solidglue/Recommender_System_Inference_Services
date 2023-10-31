@@ -108,16 +108,16 @@ func RestServerRunner() {
 	}
 
 	restServer := &RestInferService{}
-	workFunHandlers := []InferFunc{
+	InferFuncs := []InferFunc{
 		restServer.restInferServer,
 	}
 
 	httpServer := NewHttpServer()
 	if skywalkingWeatherOpen {
 		go2skyAddr := skywalkingIP + ":" + fmt.Sprintf(":%d", skywalkingPort)
-		go httpServer.restSkywalkingServerRunner(go2skyAddr, skywalkingServerName, paths, workFunHandlers)
+		go httpServer.restSkywalkingServerRunner(go2skyAddr, skywalkingServerName, paths, InferFuncs)
 	} else {
-		go httpServer.restNoskywalkingServerRunner(paths, workFunHandlers)
+		go httpServer.restNoskywalkingServerRunner(paths, InferFuncs)
 	}
 
 	select {}
