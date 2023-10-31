@@ -22,7 +22,8 @@ var ipAddr_ string
 var port_ uint64
 var lowerRecallNum int
 var lowerRankNum int
-var inferModel model.ModelInferInterface
+
+// var inferModel model.ModelInferInterface
 var recallWg sync.WaitGroup
 
 type DubbogoInferService struct {
@@ -202,7 +203,7 @@ func (r *DubbogoInferService) RecommenderInfer(in *io.RecRequest, ServiceConfig 
 	if len(resultList) > 0 {
 		for i := 0; i < len(resultList); i++ {
 			recallWg.Add(1)
-			go formatRecallResponse(resultList[i], recallCh)
+			go formatDubboResponse(resultList[i], recallCh)
 		}
 
 		recallWg.Wait()
@@ -236,7 +237,7 @@ func getRequestParams(in *io.RecRequest) io.RecRequest {
 	return request
 }
 
-func formatRecallResponse(itemScore map[string]interface{}, recallCh chan string) {
+func formatDubboResponse(itemScore map[string]interface{}, recallCh chan string) {
 	defer recallWg.Done()
 
 	itemId := itemScore["itemid"].(string)
@@ -283,7 +284,7 @@ func (r *DubbogoInferService) RecommenderInferReduce(in *io.RecRequest, ServiceC
 	if len(resultList) > 0 {
 		for i := 0; i < len(resultList); i++ {
 			recallWg.Add(1)
-			go formatRecallResponse(resultList[i], recallCh)
+			go formatDubboResponse(resultList[i], recallCh)
 		}
 
 		recallWg.Wait()
