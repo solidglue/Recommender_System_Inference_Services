@@ -13,27 +13,28 @@ func (b *ServiceConfigBuilder) GetServiceConfig() ServiceConfig {
 	return b.serviceConfig
 }
 
-func (b *ServiceConfigBuilder) RedisConfigBuilder(domain string, DataId string, redisConfStr string) *ServiceConfigBuilder {
+// redis builder
+func (b *ServiceConfigBuilder) RedisConfigBuilder(dataId string, redisConfStr string) *ServiceConfigBuilder {
 	configFactory := &ConfigFactory{}
-	redisConfig := configFactory.createRedisConfig(domain, DataId, redisConfStr)
+	redisConfig := configFactory.createRedisConfig(dataId, redisConfStr)
 	b.serviceConfig.setRedisConfig(*redisConfig)
 
 	return b
 }
 
-func (b *ServiceConfigBuilder) FaissConfigBuilder(domain string, DataId string, indexConfStr string) *ServiceConfigBuilder {
-	//load redis conf
+// faiss builder
+func (b *ServiceConfigBuilder) FaissConfigBuilder(dataId string, indexConfStr string) *ServiceConfigBuilder {
 	configFactory := &ConfigFactory{}
-	faissConfig := configFactory.createFaissConfig(indexConfStr)
+	faissConfig := configFactory.createFaissConfig(dataId, indexConfStr)
 	b.serviceConfig.setFaissIndexConfig(*faissConfig)
 
 	return b
 }
 
-func (b *ServiceConfigBuilder) ModelConfigBuilder(domain string, DataId string, modelConfStr string) *ServiceConfigBuilder {
-	//load redis conf
+// model builder
+func (b *ServiceConfigBuilder) ModelConfigBuilder(domain string, dataId string, modelConfStr string) *ServiceConfigBuilder {
 	configFactory := &ConfigFactory{}
-	modelConfig := configFactory.createModelConfig(modelConfStr)
+	modelConfig := configFactory.createModelConfig(dataId, modelConfStr)
 	b.serviceConfig.setModelConfig(*modelConfig)
 
 	return b

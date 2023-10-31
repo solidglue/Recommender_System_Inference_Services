@@ -15,25 +15,25 @@ type ConfigFactory struct {
 }
 
 // faiss config factory
-func (f *ConfigFactory) createFaissConfig(indexConfStr string) *faiss_config_loader.FaissIndexConfig {
+func (f *ConfigFactory) createFaissConfig(dataId string, indexConfStr string) *faiss_config_loader.FaissIndexConfig {
 	faissConfig := new(faiss_config_loader.FaissIndexConfig)
-	faissConfig.ConfigLoad("", "", indexConfStr)
+	faissConfig.ConfigLoad(dataId, indexConfStr)
 
 	return faissConfig
 }
 
 // model config factory
-func (m *ConfigFactory) createModelConfig(modelConfStr string) *model_config_loader.ModelConfig {
+func (m *ConfigFactory) createModelConfig(dataId string, modelConfStr string) *model_config_loader.ModelConfig {
 	modelConfig := new(model_config_loader.ModelConfig)
-	modelConfig.ConfigLoad("", "", modelConfStr)
+	modelConfig.ConfigLoad(dataId, modelConfStr)
 
 	return modelConfig
 }
 
 // redis config factory
-func (r *ConfigFactory) createRedisConfig(domain string, dataId string, redisConfStr string) *redis_config_loader.RedisConfig {
+func (r *ConfigFactory) createRedisConfig(dataId string, redisConfStr string) *redis_config_loader.RedisConfig {
 	redisConfig := new(redis_config_loader.RedisConfig)
-	redisConfig.ConfigLoad(domain, dataId, redisConfStr)
+	redisConfig.ConfigLoad(dataId, redisConfStr)
 
 	return redisConfig
 }

@@ -5,16 +5,15 @@ import (
 )
 
 type ModelConfig struct {
-	modelName          string                 //model name.
-	tfservingModelName string                 //model name of tfserving config list.
-	tfservingGrpcPool  *utils.GRPCPool        //tfserving grpc pool.
-	fieldsSpec         map[string]interface{} //feaure engine conf.
-	userRedisKeyPre    string                 //user feature redis key pre.
-	itemRedisKeyPre    string                 //item feature redis key pre.
+	modelName          string          //model name.
+	tfservingModelName string          //model name of tfserving config list.
+	tfservingGrpcPool  *utils.GRPCPool //tfserving grpc pool.
+	//fieldsSpec         map[string]interface{} //feaure engine conf.
+	userRedisKeyPre string //user feature redis key pre.
+	itemRedisKeyPre string //item feature redis key pre.
 }
 
 func init() {
-
 }
 
 // modelName
@@ -63,10 +62,10 @@ func (f *ModelConfig) GetItemRedisKeyPre() string {
 }
 
 // @implement ConfigLoadInterface
-func (m *ModelConfig) ConfigLoad(domain string, dataId string, modelConfStr string) error {
+func (m *ModelConfig) ConfigLoad(dataId string, modelConfStr string) error {
 
 	dataConf := utils.ConvertJsonToStruct(modelConfStr)
-	for tmpModelName_, tmpModelConf_ := range dataConf { // only 1 model
+	for _, tmpModelConf_ := range dataConf { // only 1 model
 
 		modelConfTmp := tmpModelConf_.(map[string]interface{})
 		tfservingGrpcConf := modelConfTmp["tfservingGrpcAddr"].(map[string]interface{})
@@ -83,7 +82,7 @@ func (m *ModelConfig) ConfigLoad(domain string, dataId string, modelConfStr stri
 		itemRedisKeyPre := modelConfTmp["itemRedisKeyPre"].(string)
 
 		//set
-		m.setModelName(tmpModelName_)
+		m.setModelName(dataId)
 		m.setTfservingModelName(modelName)
 		m.setTfservingGrpcPool(tfservingGrpcPool)
 		m.setUserRedisKeyPre(userRedisKeyPre)

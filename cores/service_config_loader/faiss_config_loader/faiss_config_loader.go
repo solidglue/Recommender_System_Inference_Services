@@ -44,7 +44,7 @@ func (f *FaissIndexConfig) GetFaissIndexs() *faiss_index.RecallRequest {
 }
 
 // @implement ConfigLoadInterface
-func (f *FaissIndexConfig) ConfigLoad(domain string, dataId string, indexConfStr string) error {
+func (f *FaissIndexConfig) ConfigLoad(dataId string, indexConfStr string) error {
 	dataConf := utils.ConvertJsonToStruct(indexConfStr)
 
 	// create faiss grpc pool

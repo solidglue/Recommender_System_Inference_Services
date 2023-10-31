@@ -1,13 +1,10 @@
 package service_config_loader
 
 import (
-	"infer-microservices/common/flags"
 	"infer-microservices/cores/service_config_loader/faiss_config_loader"
 	"infer-microservices/cores/service_config_loader/model_config_loader"
 	"infer-microservices/cores/service_config_loader/redis_config_loader"
 )
-
-var serviceConfFile string
 
 type ServiceConfig struct {
 	serviceId        string                               //dataid
@@ -17,9 +14,6 @@ type ServiceConfig struct {
 }
 
 func init() {
-	flagFactory := flags.FlagFactory{}
-	flagServiceConfig := flagFactory.CreateFlagServiceConfig()
-	serviceConfFile = *flagServiceConfig.GetServiceConfigFile()
 }
 
 // serviceId
