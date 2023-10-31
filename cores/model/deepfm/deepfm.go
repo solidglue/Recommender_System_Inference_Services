@@ -24,8 +24,8 @@ var verbose bool
 var shards int
 
 type DeepFM struct {
-	basemodel.BaseModel
-	itemList []string
+	basemodel.BaseModel // extend baseModel
+	itemList            []string
 }
 
 func init() {

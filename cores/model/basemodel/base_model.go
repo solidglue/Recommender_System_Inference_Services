@@ -17,6 +17,7 @@ import (
 	"github.com/gogo/protobuf/types"
 )
 
+var wg sync.WaitGroup
 var tfservingModelVersion int64
 var tfservingTimeout int64
 
@@ -61,18 +62,16 @@ func (b *BaseModel) GetServiceConfig() *service_config_loader.ServiceConfig {
 	return b.serviceConfig
 }
 
-func (d *BaseModel) GetInferExampleFeatures() (common.ExampleFeatures, error) {
+func (b *BaseModel) GetInferExampleFeatures() (common.ExampleFeatures, error) {
 	panic("please overwrite in extend models. ")
 
 }
 
 // get user tfrecords offline samples
 func (b *BaseModel) GetUserExampleFeatures() (*common.SeqExampleBuff, error) {
-
 	//TODO: update context features.
 	redisKey := b.serviceConfig.GetModelConfig().GetUserRedisKeyPre() + b.userId
 	userExampleFeats, err := b.serviceConfig.GetRedisConfig().GetRedisPool().Get(redisKey)
-
 	userSeqExampleBuff := common.SeqExampleBuff{}
 	userExampleFeatsBuff := make([]byte, 0)
 
@@ -111,12 +110,11 @@ func (b *BaseModel) GetUserContextExampleFeatures() (*common.SeqExampleBuff, err
 func (b *BaseModel) RequestTfservering(userExamples *[][]byte, userContextExamples *[][]byte, itemExamples *[][]byte, tensorName string) (*[]float32, error) {
 	grpcConn, err := b.serviceConfig.GetModelConfig().GetTfservingGrpcPool().Get()
 	defer b.serviceConfig.GetModelConfig().GetTfservingGrpcPool().Put(grpcConn)
-
 	if err != nil {
 		return nil, err
 	}
-	predictConfig := tfserving.NewPredictionServiceClient(grpcConn)
 
+	predictConfig := tfserving.NewPredictionServiceClient(grpcConn)
 	version := &types.Int64Value{Value: tfservingModelVersion}
 	predictRequest := &tfserving.PredictRequest{
 		ModelSpec: &tfserving.ModelSpec{
@@ -180,15 +178,14 @@ func (b *BaseModel) RequestTfservering(userExamples *[][]byte, userContextExampl
 	if err != nil {
 		return nil, err
 	}
-	predictOut, _ := predict.Outputs[tensorName]
+	predictOut := predict.Outputs[tensorName]
 
 	return &predictOut.FloatVal, nil
 }
 
 func (b *BaseModel) InferResultFormat(recallResult *[]*faiss_index.ItemInfo) (*[]map[string]interface{}, error) {
 	recall := make([]map[string]interface{}, 0)
-	recallTmp := make(chan map[string]interface{}, len(*recallResult)) // 20221011
-	var wg sync.WaitGroup
+	recallTmp := make(chan map[string]interface{}, len(*recallResult))
 
 	for idx := 0; idx < len(*recallResult); idx++ {
 		rawCell := (*recallResult)[idx]

@@ -62,6 +62,12 @@ func (m ModelFactory) CreateInferModel(modelName string, in *apis.RecRequest, se
 		inferModel_.SetItemList(itemList)
 		inferModel = inferModel_
 
+	} else if strings.ToLower(modelName) == "fm" {
+		// TODO: add fm model
+
+	} else if strings.ToLower(modelName) == "lr" {
+		// TODO: add lr model
+
 	} else {
 		err := errors.New("wrong model")
 		logs.Error(err)

@@ -15,11 +15,7 @@ import (
 	"github.com/allegro/bigcache"
 )
 
-var bigCacheConfRecallResult bigcache.Config
-var tfservingModelVersion int64
-var tfservingTimeout int64
-var bigCacheConfRecallSamples bigcache.Config
-var bigCacheConfRankSamples bigcache.Config
+var bigCacheConfDssm bigcache.Config
 var lifeWindowS time.Duration
 var cleanWindowS time.Duration
 var hardMaxCacheSize int
@@ -34,32 +30,13 @@ type Dssm struct {
 }
 
 func init() {
-
 	flagFactory := flags.FlagFactory{}
-
-	flagTensorflow := flagFactory.CreateFlagTensorflow()
-	tfservingModelVersion = *flagTensorflow.GetTfservingModelVersion()
-	tfservingTimeout = *flagTensorflow.GetTfservingTimeoutMs()
-
 	flagCache := flagFactory.CreateFlagCache()
 	lifeWindowS = time.Duration(*flagCache.GetBigcacheLifeWindowS())
 	cleanWindowS = time.Duration(*flagCache.GetBigcacheCleanWindowS())
 	hardMaxCacheSize = *flagCache.GetBigcacheHardMaxCacheSize()
 	maxEntrySize = *flagCache.GetBigcacheMaxEntrySize()
-
-	bigCacheConfRecallSamples = bigcache.Config{
-		Shards:             shards,
-		LifeWindow:         lifeWindowS * time.Minute,
-		CleanWindow:        cleanWindowS * time.Minute,
-		MaxEntriesInWindow: maxEntriesInWindow,
-		MaxEntrySize:       maxEntrySize,
-		Verbose:            verbose,
-		HardMaxCacheSize:   hardMaxCacheSize,
-		OnRemove:           nil,
-		OnRemoveWithReason: nil,
-	}
-
-	bigCacheConfRecallResult = bigcache.Config{
+	bigCacheConfDssm = bigcache.Config{
 		Shards:             shards,
 		LifeWindow:         lifeWindowS * time.Minute,
 		CleanWindow:        cleanWindowS * time.Minute,
@@ -77,7 +54,7 @@ func (d *Dssm) SetRetNum(retNum int) {
 	d.retNum = retNum
 }
 
-func (d *Dssm) getRetNum() int {
+func (d *Dssm) GetRetNum() int {
 	return d.retNum
 }
 
@@ -88,7 +65,7 @@ func (d *Dssm) ModelInferSkywalking(r *http.Request) (map[string]interface{}, er
 	tensorName := "user_embedding"
 
 	//set cache
-	bigCache, err := bigcache.NewBigCache(bigCacheConfRecallResult)
+	bigCache, err := bigcache.NewBigCache(bigCacheConfDssm)
 	if err != nil {
 		logs.Error(err)
 	}
@@ -104,7 +81,6 @@ func (d *Dssm) ModelInferSkywalking(r *http.Request) (map[string]interface{}, er
 	}
 
 	//get infer samples.
-	examples := common.ExampleFeatures{}
 	spanUnionEmFv, _, err := common.Tracer.CreateLocalSpan(r.Context())
 	if err != nil {
 		return nil, err
@@ -112,7 +88,7 @@ func (d *Dssm) ModelInferSkywalking(r *http.Request) (map[string]interface{}, er
 
 	spanUnionEmFv.SetOperationName("get recall infer examples func")
 	spanUnionEmFv.Log(time.Now())
-	examples, err = d.GetInferExampleFeatures()
+	examples, err := d.GetInferExampleFeatures()
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +96,6 @@ func (d *Dssm) ModelInferSkywalking(r *http.Request) (map[string]interface{}, er
 	spanUnionEmFv.End()
 
 	// get embedding from tfserving model.
-	embeddingVector := make([]float32, 0)
 	spanUnionEmFv, _, err = common.Tracer.CreateLocalSpan(r.Context())
 	if err != nil {
 		return nil, err
@@ -128,12 +103,10 @@ func (d *Dssm) ModelInferSkywalking(r *http.Request) (map[string]interface{}, er
 	spanUnionEmFv.SetOperationName("get recall embedding func")
 	spanUnionEmFv.Log(time.Now())
 
-	embeddingVector_, err := d.Embedding(examples, tensorName) // d.getServiceConfig().GetModelConfig().embedding(examples, tensorName)
+	embeddingVector, err := d.embedding(examples, tensorName)
 	if err != nil {
 		logs.Error(err)
 		return nil, err
-	} else {
-		embeddingVector = *embeddingVector_
 	}
 	spanUnionEmFv.Log(time.Now())
 	spanUnionEmFv.End()
@@ -147,7 +120,7 @@ func (d *Dssm) ModelInferSkywalking(r *http.Request) (map[string]interface{}, er
 	}
 	spanUnionEmFr.SetOperationName("get recall faiss index func")
 	spanUnionEmFr.Log(time.Now())
-	recallResult, err = faiss.FaissVectorSearch(d.BaseModel.GetServiceConfig().GetFaissIndexConfig(), examples, embeddingVector)
+	recallResult, err = faiss.FaissVectorSearch(d.BaseModel.GetServiceConfig().GetFaissIndexConfig(), examples, *embeddingVector)
 	if err != nil {
 		logs.Error(err)
 		return nil, err
@@ -190,7 +163,7 @@ func (d *Dssm) ModelInferNoSkywalking(r *http.Request) (map[string]interface{}, 
 	tensorName := "user_embedding"
 
 	//set cache
-	bigCache, err := bigcache.NewBigCache(bigCacheConfRecallResult)
+	bigCache, err := bigcache.NewBigCache(bigCacheConfDssm)
 	if err != nil {
 		return nil, err
 	}
@@ -206,21 +179,20 @@ func (d *Dssm) ModelInferNoSkywalking(r *http.Request) (map[string]interface{}, 
 	}
 
 	//get infer samples.
-	examples := common.ExampleFeatures{}
-	examples, err = d.GetInferExampleFeatures()
-
-	// get embedding from tfserving model.
-	embeddingVector := make([]float32, 0)
-	embeddingVector_, err := d.Embedding(examples, tensorName) // d.getServiceConfig().GetModelConfig().embedding(examples, tensorName)
+	examples, err := d.GetInferExampleFeatures()
 	if err != nil {
 		return nil, err
-	} else {
-		embeddingVector = *embeddingVector_
+	}
+
+	// get embedding from tfserving model.
+	embeddingVector, err := d.embedding(examples, tensorName)
+	if err != nil {
+		return nil, err
 	}
 
 	//request faiss index
 	recallResult := make([]*faiss_index.ItemInfo, 0)
-	recallResult, err = faiss.FaissVectorSearch(d.BaseModel.GetServiceConfig().GetFaissIndexConfig(), examples, embeddingVector)
+	recallResult, err = faiss.FaissVectorSearch(d.BaseModel.GetServiceConfig().GetFaissIndexConfig(), examples, *embeddingVector)
 	if err != nil {
 		return nil, err
 	}
@@ -246,7 +218,7 @@ func (d *Dssm) ModelInferNoSkywalking(r *http.Request) (map[string]interface{}, 
 }
 
 // request embedding vector from tfserving
-func (d *Dssm) Embedding(examples common.ExampleFeatures, tensorName string) (*[]float32, error) {
+func (d *Dssm) embedding(examples common.ExampleFeatures, tensorName string) (*[]float32, error) {
 
 	userExamples := make([][]byte, 0)
 	userContextExamples := make([][]byte, 0)
@@ -277,7 +249,7 @@ func (d *Dssm) GetInferExampleFeatures() (common.ExampleFeatures, error) {
 	}
 
 	//set cache
-	bigCache, err := bigcache.NewBigCache(bigCacheConfRecallSamples)
+	bigCache, err := bigcache.NewBigCache(bigCacheConfDssm)
 	if err != nil {
 		logs.Error(err)
 	}
