@@ -22,7 +22,7 @@ var skywalkingServerName string
 var NacosIP string
 var NacosPort uint64
 
-type WorkFunc func(w http.ResponseWriter, r *http.Request)
+type InferFunc func(w http.ResponseWriter, r *http.Request)
 type HttpServer struct {
 	ServerIP string
 	Port     uint
@@ -45,9 +45,9 @@ func NewHttpServer() *HttpServer {
 	return &HttpServer{}
 }
 
-func (httpsvr *HttpServer) restNoskywalkingServerRunner(path []string, workFunc []WorkFunc) error {
+func (httpsvr *HttpServer) restNoskywalkingServerRunner(path []string, InferFunc []InferFunc) error {
 	for idx, p := range path {
-		http.HandleFunc(p, workFunc[idx])
+		http.HandleFunc(p, InferFunc[idx])
 	}
 
 	cpuNum := runtime.NumCPU()
@@ -68,7 +68,7 @@ func (httpsvr *HttpServer) restNoskywalkingServerRunner(path []string, workFunc 
 	return nil
 }
 
-func (httpsvr *HttpServer) restSkywalkingServerRunner(go2skyAddr string, serverName string, path []string, workFunc []WorkFunc) error {
+func (httpsvr *HttpServer) restSkywalkingServerRunner(go2skyAddr string, serverName string, path []string, InferFunc []InferFunc) error {
 	common.SkywalkingTracer(go2skyAddr, serverName)
 
 	sm, err := httpPlugin.NewServerMiddleware(common.Tracer)
@@ -76,12 +76,12 @@ func (httpsvr *HttpServer) restSkywalkingServerRunner(go2skyAddr string, serverN
 		logs.Error("create server middleware error %v \n", err)
 	}
 	logs.Info("path:", path)
-	logs.Info("workFunc:", workFunc)
+	logs.Info("InferFunc:", InferFunc)
 
 	route := http.NewServeMux()
 	for idx, p := range path {
-		logs.Info("p workFunc[]:", p, workFunc[idx])
-		route.HandleFunc(p, workFunc[idx])
+		logs.Info("p InferFunc[]:", p, InferFunc[idx])
+		route.HandleFunc(p, InferFunc[idx])
 	}
 
 	cpuNum := runtime.NumCPU()
@@ -104,12 +104,12 @@ func (httpsvr *HttpServer) restSkywalkingServerRunner(go2skyAddr string, serverN
 
 func RestServerRunner() {
 	paths := []string{
-		"/recall", "/rank",
+		"/infer",
 	}
 
 	restServer := &RestInferService{}
-	workFunHandlers := []WorkFunc{
-		restServer.restInferServer, restServer.restInferServer,
+	workFunHandlers := []InferFunc{
+		restServer.restInferServer,
 	}
 
 	httpServer := NewHttpServer()
