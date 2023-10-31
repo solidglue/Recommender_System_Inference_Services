@@ -6,6 +6,8 @@ import (
 	"infer-microservices/cores/service_config_loader/redis_config_loader"
 )
 
+var ServiceConfigs = make(map[string]*ServiceConfig, 0) //one server/dataid,one service conn
+
 type ServiceConfig struct {
 	serviceId        string                               //dataid
 	redisConfig      redis_config_loader.RedisConfig      //redis conn info

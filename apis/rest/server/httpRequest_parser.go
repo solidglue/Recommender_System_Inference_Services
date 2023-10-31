@@ -2,7 +2,7 @@ package server
 
 import (
 	"errors"
-	"infer-microservices/apis"
+	"infer-microservices/apis/io"
 	"infer-microservices/utils/logs"
 	"net/http"
 	"reflect"
@@ -11,8 +11,8 @@ import (
 	jsoniter "github.com/json-iterator/go"
 )
 
-func httpRequstParse(r *http.Request) (apis.RecRequest, error) {
-	request := apis.RecRequest{}
+func httpRequstParse(r *http.Request) (io.RecRequest, error) {
+	request := io.RecRequest{}
 
 	err := r.ParseForm()
 	if err != nil {
@@ -43,8 +43,8 @@ func httpRequstParse(r *http.Request) (apis.RecRequest, error) {
 	return request, nil
 }
 
-func inputCheck(requestMap map[string]interface{}) (apis.RecRequest, error) {
-	request := apis.RecRequest{}
+func inputCheck(requestMap map[string]interface{}) (io.RecRequest, error) {
+	request := io.RecRequest{}
 
 	//dataId
 	dataId, ok := requestMap["dataId"]

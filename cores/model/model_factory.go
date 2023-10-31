@@ -2,7 +2,7 @@ package model
 
 import (
 	"errors"
-	"infer-microservices/apis"
+	"infer-microservices/apis/io"
 	"infer-microservices/common"
 	"infer-microservices/cores/model/basemodel"
 	"infer-microservices/cores/model/deepfm"
@@ -28,7 +28,7 @@ type ModelInferInterface interface {
 type ModelFactory struct {
 }
 
-func (m ModelFactory) CreateInferModel(modelName string, in *apis.RecRequest, serverConn *service_config_loader.ServiceConfig) (ModelInferInterface, error) {
+func (m ModelFactory) CreateInferModel(modelName string, in *io.RecRequest, serverConn *service_config_loader.ServiceConfig) (ModelInferInterface, error) {
 
 	//dataid
 	if in.GetDataId() == "" {

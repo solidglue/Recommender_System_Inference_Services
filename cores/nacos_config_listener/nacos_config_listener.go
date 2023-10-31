@@ -1,7 +1,6 @@
 package nacos_config_listener
 
 import (
-	"infer-microservices/apis"
 	"infer-microservices/common/flags"
 	"infer-microservices/cores/service_config_loader"
 	"infer-microservices/utils/logs"
@@ -20,6 +19,7 @@ var nacosLogLevel string
 var nacosUsername string
 var nacosPassword string
 var mt sync.Mutex
+var NacosListedMap = make(map[string]bool, 0)
 
 type NacosConnConfig struct {
 	dataId      string
@@ -175,7 +175,7 @@ func (n *NacosConnConfig) ServiceConfigUpdate(dataId string, content string) err
 		serviceConf = director.ServiceConfigUpdaterNotContainIndexDirector(domain, dataId, redisConfStr, modelConfStr)
 	}
 
-	apis.ServiceConfigs[dataId] = &serviceConf
+	service_config_loader.ServiceConfigs[dataId] = &serviceConf
 
 	return nil
 }

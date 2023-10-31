@@ -5,7 +5,7 @@ import (
 	"errors"
 	"strings"
 
-	"infer-microservices/apis"
+	"infer-microservices/apis/io"
 	"infer-microservices/common/flags"
 	"infer-microservices/cores/model"
 	"infer-microservices/cores/nacos_config_listener"
@@ -85,7 +85,7 @@ func (s *RestInferService) restInferServer(w http.ResponseWriter, r *http.Reques
 		panic(err)
 	}
 
-	ServiceConfig := apis.ServiceConfigs[request.GetDataId()]
+	ServiceConfig := service_config_loader.ServiceConfigs[request.GetDataId()]
 	response, err := s.restHystrixInfer("restServer", r, &request, ServiceConfig)
 	if err != nil {
 		logs.Error(err)
@@ -98,11 +98,11 @@ func (s *RestInferService) restInferServer(w http.ResponseWriter, r *http.Reques
 	w.Write(buff)
 }
 
-func (s *RestInferService) restHystrixInfer(serverName string, r *http.Request, in *apis.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (map[string]interface{}, error) {
+func (s *RestInferService) restHystrixInfer(serverName string, r *http.Request, in *io.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (map[string]interface{}, error) {
 	response := make(map[string]interface{}, 0)
 	hystrixErr := hystrix.Do(serverName, func() error {
 		// request recall / rank func.
-		response_, err := s.restInfer(r, in, ServiceConfig)
+		response_, err := s.RecommenderInferReduce(r, in, ServiceConfig)
 		if err != nil {
 			logs.Error(err)
 		} else {
@@ -116,7 +116,7 @@ func (s *RestInferService) restHystrixInfer(serverName string, r *http.Request, 
 		itemList := in.GetItemList()
 		in.SetRecallNum(int32(lowerRecallNum))
 		in.SetItemList(itemList[:lowerRankNum])
-		response_, err := s.restInferReduce(r, in, ServiceConfig)
+		response_, err := s.RecommenderInferReduce(r, in, ServiceConfig)
 		if err != nil {
 			logs.Error(err)
 			return err
@@ -133,7 +133,7 @@ func (s *RestInferService) restHystrixInfer(serverName string, r *http.Request, 
 	return response, nil
 }
 
-func (s *RestInferService) restInfer(r *http.Request, in *apis.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (map[string]interface{}, error) {
+func (s *RestInferService) RecommenderInfer(r *http.Request, in *io.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (map[string]interface{}, error) {
 	response := make(map[string]interface{}, 0)
 
 	dataId := in.GetDataId()
@@ -147,13 +147,13 @@ func (s *RestInferService) restInfer(r *http.Request, in *apis.RecRequest, Servi
 	nacosConn.SetIp(NacosIP)
 	nacosConn.SetPort(NacosPort)
 
-	_, ok := apis.NacosListedMap[dataId]
+	_, ok := nacos_config_listener.NacosListedMap[dataId]
 	if !ok {
 		err := nacosConn.ServiceConfigListen()
 		if err != nil {
 			return response, err
 		} else {
-			apis.NacosListedMap[dataId] = true
+			nacos_config_listener.NacosListedMap[dataId] = true
 		}
 	}
 
@@ -182,7 +182,7 @@ func (s *RestInferService) restInfer(r *http.Request, in *apis.RecRequest, Servi
 	return response, nil
 }
 
-func (s *RestInferService) restInferReduce(r *http.Request, in *apis.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (map[string]interface{}, error) {
+func (s *RestInferService) RecommenderInferReduce(r *http.Request, in *io.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (map[string]interface{}, error) {
 	response := make(map[string]interface{}, 0)
 
 	dataId := in.GetDataId()
@@ -196,13 +196,13 @@ func (s *RestInferService) restInferReduce(r *http.Request, in *apis.RecRequest,
 	nacosConn.SetIp(NacosIP)
 	nacosConn.SetPort(NacosPort)
 
-	_, ok := apis.NacosListedMap[dataId]
+	_, ok := nacos_config_listener.NacosListedMap[dataId]
 	if !ok {
 		err := nacosConn.ServiceConfigListen()
 		if err != nil {
 			return response, err
 		} else {
-			apis.NacosListedMap[dataId] = true
+			nacos_config_listener.NacosListedMap[dataId] = true
 		}
 	}
 
