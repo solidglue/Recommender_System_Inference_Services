@@ -37,16 +37,14 @@ func (r *RedisConfig) GetRedisPool() *redis_v8.InferRedisClient {
 	return r.redisPool
 }
 
-// redis conf load
+// @implement ConfigLoadInterface
 func (r *RedisConfig) ConfigLoad(domain string, dataId string, redisConfStr string) error {
-
 	confMap := utils.ConvertJsonToStruct(redisConfStr)
-	redisClusterInfo := confMap["redisCluster"].(map[string]interface{})
+	redisClusterInfo := confMap["redisClusterName"].(map[string]interface{})
 	redisConnPool := redis_v8.NewRedisClusterClient(redisClusterInfo)
 
 	r.setRedisDomain(domain)
 	r.setRedisPool(redisConnPool)
 
 	return nil
-
 }

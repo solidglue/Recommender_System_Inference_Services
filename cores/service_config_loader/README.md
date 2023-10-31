@@ -1,0 +1,1 @@
+# all the nacos config field should implement ConfigLoadInterface,such as faiss config ,model config and redis config.

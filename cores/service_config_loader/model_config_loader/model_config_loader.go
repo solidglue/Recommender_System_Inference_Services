@@ -62,7 +62,7 @@ func (f *ModelConfig) GetItemRedisKeyPre() string {
 	return f.itemRedisKeyPre
 }
 
-// model conf load
+// @implement ConfigLoadInterface
 func (m *ModelConfig) ConfigLoad(domain string, dataId string, modelConfStr string) error {
 
 	dataConf := utils.ConvertJsonToStruct(modelConfStr)

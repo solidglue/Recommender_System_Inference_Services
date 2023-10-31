@@ -43,7 +43,7 @@ func (f *FaissIndexConfig) GetFaissIndexs() *faiss_index.RecallRequest {
 	return f.faissIndexs
 }
 
-// faiss index conf load
+// @implement ConfigLoadInterface
 func (f *FaissIndexConfig) ConfigLoad(domain string, dataId string, indexConfStr string) error {
 	dataConf := utils.ConvertJsonToStruct(indexConfStr)
 
@@ -58,9 +58,9 @@ func (f *FaissIndexConfig) ConfigLoad(domain string, dataId string, indexConfStr
 	for indexName, tmpIndexConf := range indexInfo { //only 1 index
 		tmpIndexConfMap := tmpIndexConf.(map[string]interface{})
 		recallNum := int32(tmpIndexConfMap["recall_num"].(float64))
-		signature := tmpIndexConfMap["index_name"].(string)
+		indexName_ := tmpIndexConfMap["index_name"].(string)
 		indexInfoStruct := &faiss_index.RecallRequest{
-			IndexName: signature,
+			IndexName: indexName_,
 			RecallNum: recallNum,
 		}
 
