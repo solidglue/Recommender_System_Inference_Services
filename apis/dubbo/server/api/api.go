@@ -2,7 +2,7 @@ package api
 
 import (
 	"context"
-	"infer-microservices/apis"
+	"infer-microservices/apis/io"
 
 	"dubbo.apache.org/dubbo-go/v3/config"
 	hessian "github.com/apache/dubbo-go-hessian2"
@@ -14,15 +14,15 @@ var (
 
 func init() {
 	//INFO: both input and output need to register.
-	hessian.RegisterPOJO(&apis.RecRequest{})
-	hessian.RegisterPOJO(&apis.RecResponse{})
+	hessian.RegisterPOJO(&io.RecRequest{})
+	hessian.RegisterPOJO(&io.RecResponse{})
 
 	config.SetConsumerService(DubbogoInferServiceClient)
 }
 
 type DubbogoInferService struct {
 	// define service func name.
-	DubboRecommendServer func(ctx context.Context, req *apis.RecRequest) (*apis.RecResponse, error)
+	DubboRecommendServer func(ctx context.Context, req *io.RecRequest) (*io.RecResponse, error)
 }
 
 // refer : https://www.w3cschool.cn/dubbo/languages-golang-dubbo-go-30-quickstart-quickstart_dubbo.html

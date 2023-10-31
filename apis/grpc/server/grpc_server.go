@@ -10,16 +10,13 @@ import (
 	"sync"
 	"time"
 
-	"infer-microservices/apis"
 	grpc_api "infer-microservices/apis/grpc/server/api_gogofaster"
+	"infer-microservices/apis/io"
 
 	"infer-microservices/utils/logs"
-	"net"
-	"runtime"
 
 	"github.com/afex/hystrix-go/hystrix"
 	"golang.org/x/net/context"
-	"google.golang.org/grpc"
 )
 
 var grpcListenPort uint
@@ -32,7 +29,7 @@ var port_ uint64
 var inferWg sync.WaitGroup
 
 // server is used to implement customer.CustomerServer.
-type grpcRecommender struct {
+type GrpcInferService struct {
 }
 
 func init() {
@@ -49,7 +46,7 @@ func init() {
 }
 
 // INFO: implement grpc func which defined by proto.
-func (g *grpcRecommender) GrpcRecommendServer(ctx context.Context, in *grpc_api.RecommendRequest) (*grpc_api.RecommendResponse, error) {
+func (g *GrpcInferService) GrpcRecommendServer(ctx context.Context, in *grpc_api.RecommendRequest) (*grpc_api.RecommendResponse, error) {
 	//INFO: set timeout by context, degraded service by hystix.
 	response := &grpc_api.RecommendResponse{
 		Code: 404,
@@ -76,8 +73,8 @@ func (g *grpcRecommender) GrpcRecommendServer(ctx context.Context, in *grpc_api.
 	}
 }
 
-func getGrpcRequestParams(in *grpc_api.RecommendRequest) apis.RecRequest {
-	request := apis.RecRequest{}
+func getGrpcRequestParams(in *grpc_api.RecommendRequest) io.RecRequest {
+	request := io.RecRequest{}
 	request.SetDataId(in.GetDataId())
 	request.SetGroupId(in.GetGroupId())
 	request.SetNamespaceId(in.GetNamespace())
@@ -100,7 +97,7 @@ func getNacosConn(in *grpc_api.RecommendRequest) nacos_config_listener.NacosConn
 	return nacosConn
 }
 
-func (g *grpcRecommender) grpcRecommenderServerContext(ctx context.Context, in *grpc_api.RecommendRequest, respCh chan *grpc_api.RecommendResponse) {
+func (g *GrpcInferService) grpcRecommenderServerContext(ctx context.Context, in *grpc_api.RecommendRequest, respCh chan *grpc_api.RecommendResponse) {
 
 	defer func() {
 		if info := recover(); info != nil {
@@ -116,15 +113,15 @@ func (g *grpcRecommender) grpcRecommenderServerContext(ctx context.Context, in *
 
 	nacosConn := getNacosConn(in)
 	dataId := in.GetDataId()
-	ServiceConfig := apis.ServiceConfigs[dataId]
-	_, ok := apis.NacosListedMap[dataId]
+	ServiceConfig := service_config_loader.ServiceConfigs[dataId]
+	_, ok := nacos_config_listener.NacosListedMap[dataId]
 	if !ok {
 		err := nacosConn.ServiceConfigListen()
 		if err != nil {
 			logs.Error(err)
 			panic(err)
 		} else {
-			apis.NacosListedMap[dataId] = true
+			nacos_config_listener.NacosListedMap[dataId] = true
 		}
 	}
 	request := getGrpcRequestParams(in)
@@ -138,14 +135,14 @@ func (g *grpcRecommender) grpcRecommenderServerContext(ctx context.Context, in *
 	respCh <- response
 }
 
-func (r *grpcRecommender) grpcHystrixServer(serverName string, in *apis.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (*grpc_api.RecommendResponse, error) {
+func (r *GrpcInferService) grpcHystrixServer(serverName string, in *io.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (*grpc_api.RecommendResponse, error) {
 	response := &grpc_api.RecommendResponse{
 		Code: 404,
 	}
 
 	hystrixErr := hystrix.Do(serverName, func() error {
 		// request recall / rank func.
-		response_, err := r.grpcRecommender(in, ServiceConfig)
+		response_, err := r.RecommenderInfer(in, ServiceConfig)
 		if err != nil {
 			logs.Error(err)
 			return err
@@ -160,11 +157,11 @@ func (r *grpcRecommender) grpcHystrixServer(serverName string, in *apis.RecReque
 		itemList := in.GetItemList()
 		in.SetRecallNum(int32(lowerRecallNum))
 		in.SetItemList(itemList[:lowerRankNum])
-		response_, err := r.grpcRecommenderReduce(in, ServiceConfig)
+		response_, err_ := r.RecommenderInferReduce(in, ServiceConfig)
 
-		if err != nil {
-			logs.Error(err)
-			return err
+		if err_ != nil {
+			logs.Error(err_)
+			return err_
 		} else {
 			response = response_
 		}
@@ -179,7 +176,7 @@ func (r *grpcRecommender) grpcHystrixServer(serverName string, in *apis.RecReque
 	return response, nil
 }
 
-func (g *grpcRecommender) grpcRecommender(in *apis.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (*grpc_api.RecommendResponse, error) {
+func (g *GrpcInferService) RecommenderInfer(in *io.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (*grpc_api.RecommendResponse, error) {
 	response := &grpc_api.RecommendResponse{
 		Code: 404,
 	}
@@ -246,7 +243,7 @@ func formatGrpcResponse(itemScore map[string]interface{}, rankCh chan *grpc_api.
 	rankCh <- itemInfo
 }
 
-func (g *grpcRecommender) grpcRecommenderReduce(in *apis.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (*grpc_api.RecommendResponse, error) {
+func (g *GrpcInferService) RecommenderInferReduce(in *io.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (*grpc_api.RecommendResponse, error) {
 	response := &grpc_api.RecommendResponse{
 		Code: 404,
 	}
@@ -300,35 +297,4 @@ func (g *grpcRecommender) grpcRecommenderReduce(in *apis.RecRequest, ServiceConf
 	}
 
 	return response, nil
-}
-
-// runner
-func GrpcServerRunner(nacosIp string, nacosPort uint64) error {
-	ipAddr_ = nacosIp
-	port_ = nacosPort
-	cpuNum := runtime.NumCPU()
-	if maxCpuNum <= cpuNum {
-		cpuNum = maxCpuNum
-	}
-	runtime.GOMAXPROCS(cpuNum)
-	logs.Info("cup num:", cpuNum)
-
-	addr := fmt.Sprintf(":%d", grpcListenPort)
-	lis, err := net.Listen("tcp", addr)
-	if err != nil {
-		logs.Fatal("failed to listen: %v", err)
-		panic(err)
-	} else {
-		logs.Info("listen to port:", addr)
-	}
-
-	s := grpc.NewServer()
-	grpc_api.RegisterGrpcRecommendServerServiceServer(s, nil)
-	s.Serve(lis)
-	if err != nil {
-		logs.Error(err)
-		return err
-	}
-
-	return nil
 }

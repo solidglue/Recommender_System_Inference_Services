@@ -3,8 +3,8 @@ package client
 import (
 	"context"
 	"fmt"
-	"infer-microservices/apis"
 	"infer-microservices/apis/dubbo/server/api"
+	"infer-microservices/apis/io"
 	"infer-microservices/utils/logs"
 
 	"dubbo.apache.org/dubbo-go/v3/config"
@@ -16,7 +16,7 @@ import (
 func requestDubboService() {
 	itemList := []string{"80000001", "80000002", "80000003", "80000004"}
 
-	req := apis.RecRequest{}
+	req := io.RecRequest{}
 	req.SetDataId("$dataid|$groupid") //nacos dataid|groupid
 	req.SetUserId("$userid")          //userid
 	req.SetItemList(itemList)         //rank items
