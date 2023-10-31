@@ -3,6 +3,8 @@ package model
 import (
 	"errors"
 	"infer-microservices/apis"
+	"infer-microservices/common"
+	"infer-microservices/cores/model/basemodel"
 	"infer-microservices/cores/model/deepfm"
 	"infer-microservices/cores/model/dssm"
 	"infer-microservices/cores/service_config_loader"
@@ -11,14 +13,12 @@ import (
 	"strings"
 )
 
+var baseModel *basemodel.BaseModel
 var inferModel ModelInferInterface
 
 type ModelInferInterface interface {
-	//set params
-	SetUserId(userId string)
-	SetRetNum(retNum int)
-	SetItemList(itemList []string)
-	SetServiceConfig(serviceConfig *service_config_loader.ServiceConfig)
+	//get infer samples.
+	GetInferExampleFeatures() (common.ExampleFeatures, error)
 
 	//model infer.
 	ModelInferSkywalking(r *http.Request) (map[string]interface{}, error)
@@ -29,16 +29,6 @@ type ModelFactory struct {
 }
 
 func (m ModelFactory) CreateInferModel(modelName string, in *apis.RecRequest, serverConn *service_config_loader.ServiceConfig) (ModelInferInterface, error) {
-
-	if strings.ToLower(modelName) == "dssm" {
-		inferModel = &dssm.Dssm{}
-	} else if strings.ToLower(modelName) == "deepfm" {
-		inferModel = &deepfm.DeepFM{}
-	} else {
-		err := errors.New("wrong model")
-		logs.Error(err)
-		return inferModel, err
-	}
 
 	//dataid
 	if in.GetDataId() == "" {
@@ -51,21 +41,31 @@ func (m ModelFactory) CreateInferModel(modelName string, in *apis.RecRequest, se
 		return inferModel, errors.New("userid can not be empty")
 	}
 
-	inferModel.SetUserId(userId)
-	inferModel.SetServiceConfig(serverConn)
+	baseModel = new(basemodel.BaseModel)
+	baseModel.SetUserId(userId)
+	baseModel.SetServiceConfig(serverConn)
 
-	//only rank model set itemlist
-	if strings.ToLower(modelName) == "deepfm" {
-		//itemlist
-		itemList := make([]string, 0)
-		itemListIn := in.GetItemList()
-		if itemListIn == nil {
-			return inferModel, errors.New("itemlist can not be empty")
-		} else {
-			itemList = itemListIn
+	if strings.ToLower(modelName) == "dssm" {
+		inferModel = &dssm.Dssm{
+			BaseModel: *baseModel,
+		}
+	} else if strings.ToLower(modelName) == "deepfm" {
+		inferModel_ := &deepfm.DeepFM{
+			BaseModel: *baseModel,
 		}
 
-		inferModel.SetItemList(itemList)
+		//itemlist
+		itemList := in.GetItemList()
+		if itemList == nil {
+			return &deepfm.DeepFM{}, errors.New("itemlist can not be empty")
+		}
+		inferModel_.SetItemList(itemList)
+		inferModel = inferModel_
+
+	} else {
+		err := errors.New("wrong model")
+		logs.Error(err)
+		return inferModel, err
 	}
 
 	return inferModel, nil
