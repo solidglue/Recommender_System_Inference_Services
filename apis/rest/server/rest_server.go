@@ -116,10 +116,10 @@ func (s *RestInferService) restHystrixInfer(serverName string, r *http.Request, 
 		itemList := in.GetItemList()
 		in.SetRecallNum(int32(lowerRecallNum))
 		in.SetItemList(itemList[:lowerRankNum])
-		response_, err := s.RecommenderInferReduce(r, in, ServiceConfig)
-		if err != nil {
-			logs.Error(err)
-			return err
+		response_, err_ := s.RecommenderInferReduce(r, in, ServiceConfig)
+		if err_ != nil {
+			logs.Error(err_)
+			return err_
 		} else {
 			response = response_
 		}
