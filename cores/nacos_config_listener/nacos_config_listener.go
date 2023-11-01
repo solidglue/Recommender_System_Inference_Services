@@ -147,7 +147,7 @@ func (n *NacosConnConfig) listenNacosConfig(nacosClient config_client.IConfigCli
 		Group:  n.GetGroupId(),
 		OnChange: func(namespace, group, dataId, data string) {
 			content := string(data)
-			n.ServiceConfigUpdate(dataId, content)
+			n.serviceConfigUpdate(dataId, content)
 		},
 	})
 
@@ -158,7 +158,7 @@ func (n *NacosConnConfig) listenNacosConfig(nacosClient config_client.IConfigCli
 	return nil
 }
 
-func (n *NacosConnConfig) ServiceConfigUpdate(dataId string, content string) error {
+func (n *NacosConnConfig) serviceConfigUpdate(dataId string, content string) error {
 	mt.Lock()
 	defer mt.Unlock()
 
