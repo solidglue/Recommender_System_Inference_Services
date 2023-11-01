@@ -145,7 +145,7 @@ func inputCheck(requestMap map[string]interface{}) (io.RecRequest, error) {
 		return request, errors.New("userId can not be empty")
 	}
 
-	//recall num. reflect.
+	//INFO:the recallNum param from http request,maybe int/ float /string。 user reflect to convert to int32.
 	recallNum := int32(100)
 	recallNumType := reflect.TypeOf(requestMap["recallNum"])
 	recallNumTypeKind := recallNumType.Kind()
