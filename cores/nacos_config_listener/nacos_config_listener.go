@@ -162,7 +162,10 @@ func (n *NacosConnConfig) ServiceConfigUpdate(dataId string, content string) err
 	mt.Lock()
 	defer mt.Unlock()
 
+	builder := service_config_loader.ServiceConfigBuilder{}
 	director := service_config_loader.ServiceConfigDirector{}
+	director.SetConfigBuilder(builder)
+
 	NacosContent := NacosContent{}
 	domain, redisConfStr, modelConfStr, indexConfStr := NacosContent.InputServiceConfigParse(content)
 
