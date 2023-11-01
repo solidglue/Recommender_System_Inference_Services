@@ -166,8 +166,8 @@ func (n *NacosConnConfig) ServiceConfigUpdate(dataId string, content string) err
 	director := service_config_loader.ServiceConfigDirector{}
 	director.SetConfigBuilder(builder)
 
-	NacosContent := NacosContent{}
-	domain, redisConfStr, modelConfStr, indexConfStr := NacosContent.InputServiceConfigParse(content)
+	nacosContent := nacosContent{}
+	domain, redisConfStr, modelConfStr, indexConfStr := nacosContent.InputServiceConfigParse(content)
 
 	var serviceConf service_config_loader.ServiceConfig
 	if indexConfStr == "{}" {

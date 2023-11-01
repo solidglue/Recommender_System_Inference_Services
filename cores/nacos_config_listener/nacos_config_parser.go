@@ -5,9 +5,7 @@ import (
 	"infer-microservices/utils"
 )
 
-var nacosContentInstance *NacosContent
-
-type NacosContent struct {
+type nacosContent struct {
 	author  string
 	update  string
 	version string
@@ -21,18 +19,8 @@ type Config_ struct {
 	indexConfNacos map[string]interface{} //faiss index conf.
 }
 
-// func init() {
-// 	//serviceConfFile = *flags.Service_start_file
-// 	nacosContentInstance = new(NacosContent)
-
-// }
-
-// func getNacosContentInstance() *NacosContent {
-// 	return nacosContentInstance
-// }
-
 // parse service config file, which contains index info、redis info and model info etc.
-func (s *NacosContent) InputServiceConfigParse(content string) (string, string, string, string) {
+func (s *nacosContent) InputServiceConfigParse(content string) (string, string, string, string) {
 	json.Unmarshal([]byte(string(content)), s)
 	redisConfStr := utils.ConvertStructToJson(s.config.redisConfNacos)
 	modelConfStr := utils.ConvertStructToJson(s.config.modelConfNacos)
