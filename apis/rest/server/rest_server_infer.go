@@ -3,37 +3,25 @@ package server
 import (
 	"context"
 	"errors"
+	"infer-microservices/utils/logs"
+	"net/http"
+	"reflect"
+	"strconv"
 	"strings"
 
 	"infer-microservices/apis/io"
-	"infer-microservices/common/flags"
 	"infer-microservices/cores/model"
 	"infer-microservices/cores/nacos_config_listener"
 	"infer-microservices/cores/service_config_loader"
-	"infer-microservices/utils/logs"
-	"net/http"
 	"time"
 
-	"github.com/afex/hystrix-go/hystrix"
 	jsoniter "github.com/json-iterator/go"
+
+	"github.com/afex/hystrix-go/hystrix"
 )
 
-var lowerRankNum int
-var lowerRecallNum int
-
-type RestInferService struct {
-}
-
-func init() {
-	flagFactory := flags.FlagFactory{}
-	flagHystrix := flagFactory.CreateFlagHystrix()
-
-	lowerRecallNum = *flagHystrix.GetHystrixLowerRecallNum()
-	lowerRankNum = *flagHystrix.GetHystrixLowerRankNum()
-}
-
 // infer
-func (s *RestInferService) restInferServer(w http.ResponseWriter, r *http.Request) {
+func (s *HttpServer) restInferServer(w http.ResponseWriter, r *http.Request) {
 
 	defer func() {
 		if info := recover(); info != nil {
@@ -98,11 +86,119 @@ func (s *RestInferService) restInferServer(w http.ResponseWriter, r *http.Reques
 	w.Write(buff)
 }
 
-func (s *RestInferService) restHystrixInfer(serverName string, r *http.Request, in *io.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (map[string]interface{}, error) {
+func httpRequstParse(r *http.Request) (io.RecRequest, error) {
+	request := io.RecRequest{}
+
+	err := r.ParseForm()
+	if err != nil {
+		return request, err
+	}
+
+	method := r.Method
+	if method != "POST" {
+		return request, err
+	}
+
+	data := r.Form["data"]
+	if len(data) == 0 {
+		return request, err
+	}
+
+	requestMap := make(map[string]interface{}, 0)
+	err = jsoniter.Unmarshal([]byte(data[0]), &requestMap)
+	if err != nil {
+		return request, err
+	}
+
+	request, err = inputCheck(requestMap)
+	if err != nil {
+		return request, err
+	}
+
+	return request, nil
+}
+
+func inputCheck(requestMap map[string]interface{}) (io.RecRequest, error) {
+	request := io.RecRequest{}
+
+	//dataId
+	dataId, ok := requestMap["dataId"]
+	if ok {
+		request.SetDataId(dataId.(string))
+	} else {
+		return request, errors.New("dataId can not be empty")
+	}
+
+	//modelType
+	modelType, ok := requestMap["modelType"]
+	if ok {
+		request.SetModelType(modelType.(string))
+	} else {
+		return request, errors.New("modelType can not be empty")
+	}
+
+	//userId
+	userId, ok := requestMap["userId"]
+	if ok {
+		request.SetUserId(userId.(string))
+	} else {
+		return request, errors.New("userId can not be empty")
+	}
+
+	//recall num. reflect.
+	recallNum := int32(100)
+	recallNumType := reflect.TypeOf(requestMap["recallNum"])
+	recallNumTypeKind := recallNumType.Kind()
+	switch recallNumTypeKind {
+	case reflect.String:
+		recallNumStr, ok0 := requestMap["recallNum"].(string)
+		if ok0 {
+			recallNum64, err := strconv.ParseInt(recallNumStr, 10, 64)
+			if err != nil {
+				ok = false
+			} else {
+				recallNum = int32(recallNum64)
+				ok = true
+			}
+		}
+	case reflect.Float32, reflect.Float64, reflect.Int16, reflect.Int, reflect.Int64, reflect.Int8,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		recallNum, ok = requestMap["recallNum"].(int32)
+	default:
+		err := errors.New("unkown type, set recallnum to 100")
+		logs.Error(err)
+	}
+
+	if ok {
+		request.SetRecallNum(recallNum)
+	} else {
+		return request, errors.New("dataId can not be empty")
+	}
+
+	if recallNum > 1000 {
+		return request, errors.New("recallNum should less than 1000 ")
+	}
+
+	//itemList
+	itemList, ok := requestMap["itemList"].([]string)
+	if ok {
+		request.SetItemList(itemList)
+	} else {
+		return request, errors.New("itemList can not be empty")
+	}
+
+	if len(itemList) > 200 {
+		return request, errors.New("itemList's len should less than 200 ")
+	}
+
+	return request, nil
+}
+
+func (s *HttpServer) restHystrixInfer(serverName string, r *http.Request, in *io.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (map[string]interface{}, error) {
 	response := make(map[string]interface{}, 0)
 	hystrixErr := hystrix.Do(serverName, func() error {
 		// request recall / rank func.
-		response_, err := s.RecommenderInferReduce(r, in, ServiceConfig)
+		response_, err := s.recommenderInferReduce(r, in, ServiceConfig)
 		if err != nil {
 			logs.Error(err)
 		} else {
@@ -114,9 +210,9 @@ func (s *RestInferService) restHystrixInfer(serverName string, r *http.Request, 
 		// less items and simple model.
 
 		itemList := in.GetItemList()
-		in.SetRecallNum(int32(lowerRecallNum))
-		in.SetItemList(itemList[:lowerRankNum])
-		response_, err_ := s.RecommenderInferReduce(r, in, ServiceConfig)
+		in.SetRecallNum(int32(s.lowerRecallNum))
+		in.SetItemList(itemList[:s.lowerRankNum])
+		response_, err_ := s.recommenderInferReduce(r, in, ServiceConfig)
 		if err_ != nil {
 			logs.Error(err_)
 			return err_
@@ -133,7 +229,7 @@ func (s *RestInferService) restHystrixInfer(serverName string, r *http.Request, 
 	return response, nil
 }
 
-func (s *RestInferService) RecommenderInfer(r *http.Request, in *io.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (map[string]interface{}, error) {
+func (s *HttpServer) recommenderInfer(r *http.Request, in *io.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (map[string]interface{}, error) {
 	response := make(map[string]interface{}, 0)
 
 	dataId := in.GetDataId()
@@ -144,8 +240,8 @@ func (s *RestInferService) RecommenderInfer(r *http.Request, in *io.RecRequest, 
 	nacosConn.SetDataId(dataId)
 	nacosConn.SetGroupId(groupId)
 	nacosConn.SetNamespaceId(namespaceId)
-	nacosConn.SetIp(NacosIP)
-	nacosConn.SetPort(NacosPort)
+	nacosConn.SetIp(s.nacosIp)
+	nacosConn.SetPort(uint64(s.nacosPort))
 
 	_, ok := nacos_config_listener.NacosListedMap[dataId]
 	if !ok {
@@ -169,7 +265,7 @@ func (s *RestInferService) RecommenderInfer(r *http.Request, in *io.RecRequest, 
 		return response, err
 	}
 
-	if skywalkingWeatherOpen {
+	if s.skywalkingWeatherOpen {
 		response, err = modelinfer.ModelInferSkywalking(r)
 	} else {
 		response, err = modelinfer.ModelInferNoSkywalking(r)
@@ -182,7 +278,7 @@ func (s *RestInferService) RecommenderInfer(r *http.Request, in *io.RecRequest, 
 	return response, nil
 }
 
-func (s *RestInferService) RecommenderInferReduce(r *http.Request, in *io.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (map[string]interface{}, error) {
+func (s *HttpServer) recommenderInferReduce(r *http.Request, in *io.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (map[string]interface{}, error) {
 	response := make(map[string]interface{}, 0)
 
 	dataId := in.GetDataId()
@@ -193,8 +289,8 @@ func (s *RestInferService) RecommenderInferReduce(r *http.Request, in *io.RecReq
 	nacosConn.SetDataId(dataId)
 	nacosConn.SetGroupId(groupId)
 	nacosConn.SetNamespaceId(namespaceId)
-	nacosConn.SetIp(NacosIP)
-	nacosConn.SetPort(NacosPort)
+	nacosConn.SetIp(s.nacosIp)
+	nacosConn.SetPort(uint64(s.nacosPort))
 
 	_, ok := nacos_config_listener.NacosListedMap[dataId]
 	if !ok {
@@ -220,7 +316,7 @@ func (s *RestInferService) RecommenderInferReduce(r *http.Request, in *io.RecReq
 		return response, err
 	}
 
-	if skywalkingWeatherOpen {
+	if s.skywalkingWeatherOpen {
 		response, err = modelinfer.ModelInferSkywalking(r)
 	} else {
 		response, err = modelinfer.ModelInferNoSkywalking(r)

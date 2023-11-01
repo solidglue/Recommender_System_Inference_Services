@@ -1,0 +1,1 @@
+# when add new type service, should implent ServerStartInterface.

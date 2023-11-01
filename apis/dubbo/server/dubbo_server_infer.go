@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"infer-microservices/apis/io"
-	"infer-microservices/common/flags"
 	"infer-microservices/cores/model"
 	"infer-microservices/cores/nacos_config_listener"
 	"infer-microservices/cores/service_config_loader"
@@ -18,29 +17,8 @@ import (
 	"github.com/afex/hystrix-go/hystrix"
 )
 
-var ipAddr_ string
-var port_ uint64
-var lowerRecallNum int
-var lowerRankNum int
-
 // var inferModel model.ModelInferInterface
 var recallWg sync.WaitGroup
-
-type DubbogoInferService struct {
-}
-
-func init() {
-	// //regisger dubbo service.
-	// hessian.RegisterPOJO(&io.RecRequest{})
-	// hessian.RegisterPOJO(&io.RecResponse{})
-	// config.SetProviderService(&DubbogoInferService{})
-
-	//get hystrix parms.
-	flagFactory := flags.FlagFactory{}
-	flagHystrix := flagFactory.CreateFlagHystrix()
-	lowerRecallNum = *flagHystrix.GetHystrixLowerRecallNum()
-	lowerRankNum = *flagHystrix.GetHystrixLowerRankNum()
-}
 
 //INFO:DONT REMOVE.  JAVA request service need it.
 // // MethodMapper mapper upper func name to lower func name ,for java request.
@@ -51,7 +29,7 @@ func init() {
 // }
 
 // Implement interface methods.
-func (r *DubbogoInferService) DubboRecommendServer(ctx context.Context, in *io.RecRequest) (*io.RecResponse, error) {
+func (s *DubboServer) DubboRecommendServer(ctx context.Context, in *io.RecRequest) (*io.RecResponse, error) {
 	response := &io.RecResponse{}
 	response.SetCode(404)
 
@@ -60,7 +38,7 @@ func (r *DubbogoInferService) DubboRecommendServer(ctx context.Context, in *io.R
 	defer cancelFunc()
 
 	respCh := make(chan *io.RecResponse, 100)
-	go r.dubboRecommenderServerContext(ctx, in, respCh)
+	go s.dubboRecommenderServerContext(ctx, in, respCh)
 
 	for {
 		select {
@@ -80,7 +58,7 @@ func (r *DubbogoInferService) DubboRecommendServer(ctx context.Context, in *io.R
 	}
 }
 
-func (r *DubbogoInferService) dubboRecommenderServerContext(ctx context.Context, in *io.RecRequest, respCh chan *io.RecResponse) {
+func (s *DubboServer) dubboRecommenderServerContext(ctx context.Context, in *io.RecRequest, respCh chan *io.RecResponse) {
 	defer func() {
 		if info := recover(); info != nil {
 			fmt.Println("panic", info)
@@ -92,7 +70,7 @@ func (r *DubbogoInferService) dubboRecommenderServerContext(ctx context.Context,
 	response := &io.RecResponse{}
 	response.SetCode(404)
 
-	nacosConn := getNacosConn(in)
+	nacosConn := s.getNacosConn(in)
 	ServiceConfig := service_config_loader.ServiceConfigs[in.GetDataId()]
 	dataId := nacosConn.GetDataId()
 	_, ok := nacos_config_listener.NacosListedMap[dataId]
@@ -106,7 +84,7 @@ func (r *DubbogoInferService) dubboRecommenderServerContext(ctx context.Context,
 		}
 	}
 
-	response_, err := r.dubboHystrixServer("dubboServer", in, ServiceConfig)
+	response_, err := s.dubboHystrixServer("dubboServer", in, ServiceConfig)
 	if err != nil {
 		response.SetMessage(fmt.Sprintf("%s", err))
 		panic(err)
@@ -117,7 +95,7 @@ func (r *DubbogoInferService) dubboRecommenderServerContext(ctx context.Context,
 	respCh <- response
 }
 
-func getNacosConn(in *io.RecRequest) nacos_config_listener.NacosConnConfig {
+func (s *DubboServer) getNacosConn(in *io.RecRequest) nacos_config_listener.NacosConnConfig {
 	//nacos listen need follow parms.
 	nacosConn := nacos_config_listener.NacosConnConfig{}
 	dataId := in.GetDataId()
@@ -127,19 +105,19 @@ func getNacosConn(in *io.RecRequest) nacos_config_listener.NacosConnConfig {
 	nacosConn.SetDataId(dataId)
 	nacosConn.SetGroupId(groupId)
 	nacosConn.SetNamespaceId(namespaceId)
-	nacosConn.SetIp(ipAddr_)
-	nacosConn.SetPort(port_)
+	nacosConn.SetIp(s.nacosIp)
+	nacosConn.SetPort(uint64(s.nacosPort))
 
 	return nacosConn
 }
 
-func (r *DubbogoInferService) dubboHystrixServer(serverName string, in *io.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (*io.RecResponse, error) {
+func (s *DubboServer) dubboHystrixServer(serverName string, in *io.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (*io.RecResponse, error) {
 	response := &io.RecResponse{}
 	response.SetCode(404)
 
 	hystrixErr := hystrix.Do(serverName, func() error {
 		// request recall / rank func.
-		response_, err_ := r.RecommenderInfer(in, ServiceConfig)
+		response_, err_ := s.recommenderInfer(in, ServiceConfig)
 		if err_ != nil {
 			logs.Error(err_)
 			return err_
@@ -151,11 +129,11 @@ func (r *DubbogoInferService) dubboHystrixServer(serverName string, in *io.RecRe
 		//INFO: do this when services are timeout (hystrix timeout).
 		// less items and simple model.
 
-		//INFO:降级和非降级用一个函数，会造成读写冲突
+		//INFO:its better not use the same func
 		itemList := in.GetItemList()
-		in.SetRecallNum(int32(lowerRecallNum))
-		in.SetItemList(itemList[:lowerRankNum])
-		response_, err_ := r.RecommenderInferReduce(in, ServiceConfig)
+		in.SetRecallNum(int32(s.lowerRecallNum))
+		in.SetItemList(itemList[:s.lowerRankNum])
+		response_, err_ := s.recommenderInferReduce(in, ServiceConfig)
 		if err_ != nil {
 			logs.Error(err_)
 			return err_
@@ -172,7 +150,7 @@ func (r *DubbogoInferService) dubboHystrixServer(serverName string, in *io.RecRe
 	return response, nil
 }
 
-func (r *DubbogoInferService) RecommenderInfer(in *io.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (*io.RecResponse, error) {
+func (s *DubboServer) recommenderInfer(in *io.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (*io.RecResponse, error) {
 	response := &io.RecResponse{}
 	response.SetCode(404)
 
@@ -251,7 +229,7 @@ func formatDubboResponse(itemScore map[string]interface{}, recallCh chan string)
 	recallCh <- itemScoreStr
 }
 
-func (r *DubbogoInferService) RecommenderInferReduce(in *io.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (*io.RecResponse, error) {
+func (s *DubboServer) recommenderInferReduce(in *io.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (*io.RecResponse, error) {
 	response := &io.RecResponse{}
 	response.SetCode(404)
 

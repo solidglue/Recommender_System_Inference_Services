@@ -2,45 +2,39 @@ package main
 
 import (
 	"flag"
-	dubbo_server "infer-microservices/apis/dubbo/server"
-	grpc_server "infer-microservices/apis/grpc/server"
-	rest_server "infer-microservices/apis/rest/server"
-	"infer-microservices/common/flags"
+	"infer-microservices/apis"
 	"infer-microservices/utils/logs"
 )
 
-var dubboConf string
-var nacosIp string
-var nacosPort uint64
+var apiFactory apis.ApiFactory
+var apiServer apis.ServerStartInterface //INFO:apis implement ServerStartInterface
 
 func init() {
-	flagFactory := flags.FlagFactory{}
-	flagDubbo := flagFactory.CreateFlagDubbo()
-	flagNacos := flagFactory.CreateFlagNacos()
-
-	dubboConf = *flagDubbo.GetDubboServiceFile()
-	nacosIp = *flagNacos.GetNacosIp()
-	nacosPort = uint64(*flagNacos.GetNacosPort())
+	apiFactory = apis.ApiFactory{}
 }
 
-func restfulServiceStart() {
-	rest_server.NacosIP = nacosIp
-	rest_server.NacosPort = nacosPort
-	logs.Info("starting rest servivce...")
-	rest_server.RestServerRunner()
-	logs.Info("finished start servivce.")
-}
-
-func grpcServiceStart() {
-	logs.Info("starting grpc servivce...")
-	grpc_server.GrpcServerRunner(nacosIp, nacosPort)
-	logs.Info("finished start servivce.")
-}
-
+// start dubbo service
 func dubboServiceStart() {
+	apiServer = apiFactory.CreateDubboServer()
 	logs.Info("starting dubbo servivce...")
-	dubbo_server.DubboServerRunner(nacosIp, nacosPort, dubboConf)
-	logs.Info("finished dubbo servivce.")
+	apiServer.ServerStart()
+	logs.Info("successed start dubbo servivce.")
+}
+
+// start grpc service
+func grpcServiceStart() {
+	apiServer = apiFactory.CreateGrpcServer()
+	logs.Info("starting grpc servivce...")
+	apiServer.ServerStart()
+	logs.Info("successed start grpc servivce.")
+}
+
+// start rest service
+func restfulServiceStart() {
+	apiServer = apiFactory.CreateRestServer()
+	logs.Info("starting rest servivce...")
+	apiServer.ServerStart()
+	logs.Info("successed start rest servivce.")
 }
 
 func main() {

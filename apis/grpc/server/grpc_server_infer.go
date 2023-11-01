@@ -2,7 +2,6 @@ package server
 
 import (
 	"fmt"
-	"infer-microservices/common/flags"
 	"infer-microservices/cores/model"
 	"infer-microservices/cores/nacos_config_listener"
 	"infer-microservices/cores/service_config_loader"
@@ -19,34 +18,10 @@ import (
 	"golang.org/x/net/context"
 )
 
-var grpcListenPort uint
-var maxCpuNum int
-var skywalkingWeatherOpen bool
-var lowerRecallNum int
-var lowerRankNum int
-var ipAddr_ string
-var port_ uint64
 var inferWg sync.WaitGroup
 
-// server is used to implement customer.CustomerServer.
-type GrpcInferService struct {
-}
-
-func init() {
-	flagFactory := flags.FlagFactory{}
-	flagServiceConfig := flagFactory.CreateFlagServiceConfig()
-	flagSkywalking := flagFactory.CreateFlagSkywalking()
-	flagHystrix := flagFactory.CreateFlagHystrix()
-
-	grpcListenPort = *flagServiceConfig.GetServiceGrpcPort()
-	maxCpuNum = *flagServiceConfig.GetServiceMaxCpuNum()
-	skywalkingWeatherOpen = *flagSkywalking.GetSkywalkingWhetheropen()
-	lowerRecallNum = *flagHystrix.GetHystrixLowerRecallNum()
-	lowerRankNum = *flagHystrix.GetHystrixLowerRankNum()
-}
-
 // INFO: implement grpc func which defined by proto.
-func (g *GrpcInferService) GrpcRecommendServer(ctx context.Context, in *grpc_api.RecommendRequest) (*grpc_api.RecommendResponse, error) {
+func (g *GrpcServer) GrpcRecommendServer(ctx context.Context, in *grpc_api.RecommendRequest) (*grpc_api.RecommendResponse, error) {
 	//INFO: set timeout by context, degraded service by hystix.
 	response := &grpc_api.RecommendResponse{
 		Code: 404,
@@ -85,19 +60,19 @@ func getGrpcRequestParams(in *grpc_api.RecommendRequest) io.RecRequest {
 	return request
 }
 
-func getNacosConn(in *grpc_api.RecommendRequest) nacos_config_listener.NacosConnConfig {
+func (s *GrpcServer) getNacosConn(in *grpc_api.RecommendRequest) nacos_config_listener.NacosConnConfig {
 	//nacos listen need follow parms.
 	nacosConn := nacos_config_listener.NacosConnConfig{}
 	nacosConn.SetDataId(in.GetDataId())
 	nacosConn.SetGroupId(in.GetGroupId())
 	nacosConn.SetNamespaceId(in.GetNamespace())
-	nacosConn.SetIp(ipAddr_)
-	nacosConn.SetPort(port_)
+	nacosConn.SetIp(s.nacosIp)
+	nacosConn.SetPort(uint64(s.nacosPort))
 
 	return nacosConn
 }
 
-func (g *GrpcInferService) grpcRecommenderServerContext(ctx context.Context, in *grpc_api.RecommendRequest, respCh chan *grpc_api.RecommendResponse) {
+func (s *GrpcServer) grpcRecommenderServerContext(ctx context.Context, in *grpc_api.RecommendRequest, respCh chan *grpc_api.RecommendResponse) {
 
 	defer func() {
 		if info := recover(); info != nil {
@@ -111,7 +86,7 @@ func (g *GrpcInferService) grpcRecommenderServerContext(ctx context.Context, in 
 		Code: 404,
 	}
 
-	nacosConn := getNacosConn(in)
+	nacosConn := s.getNacosConn(in)
 	dataId := in.GetDataId()
 	ServiceConfig := service_config_loader.ServiceConfigs[dataId]
 	_, ok := nacos_config_listener.NacosListedMap[dataId]
@@ -125,7 +100,7 @@ func (g *GrpcInferService) grpcRecommenderServerContext(ctx context.Context, in 
 		}
 	}
 	request := getGrpcRequestParams(in)
-	response_, err := g.grpcHystrixServer("grpcServer", &request, ServiceConfig)
+	response_, err := s.grpcHystrixServer("grpcServer", &request, ServiceConfig)
 	if err != nil {
 		response.Message = fmt.Sprintf("%s", err)
 		panic(err)
@@ -135,14 +110,14 @@ func (g *GrpcInferService) grpcRecommenderServerContext(ctx context.Context, in 
 	respCh <- response
 }
 
-func (r *GrpcInferService) grpcHystrixServer(serverName string, in *io.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (*grpc_api.RecommendResponse, error) {
+func (s *GrpcServer) grpcHystrixServer(serverName string, in *io.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (*grpc_api.RecommendResponse, error) {
 	response := &grpc_api.RecommendResponse{
 		Code: 404,
 	}
 
 	hystrixErr := hystrix.Do(serverName, func() error {
 		// request recall / rank func.
-		response_, err := r.RecommenderInfer(in, ServiceConfig)
+		response_, err := s.recommenderInfer(in, ServiceConfig)
 		if err != nil {
 			logs.Error(err)
 			return err
@@ -155,9 +130,9 @@ func (r *GrpcInferService) grpcHystrixServer(serverName string, in *io.RecReques
 		//INFO: do this when services are timeout (hystrix timeout).
 		// less items and simple model.
 		itemList := in.GetItemList()
-		in.SetRecallNum(int32(lowerRecallNum))
-		in.SetItemList(itemList[:lowerRankNum])
-		response_, err_ := r.RecommenderInferReduce(in, ServiceConfig)
+		in.SetRecallNum(int32(s.lowerRecallNum))
+		in.SetItemList(itemList[:s.lowerRankNum])
+		response_, err_ := s.recommenderInferReduce(in, ServiceConfig)
 
 		if err_ != nil {
 			logs.Error(err_)
@@ -176,7 +151,7 @@ func (r *GrpcInferService) grpcHystrixServer(serverName string, in *io.RecReques
 	return response, nil
 }
 
-func (g *GrpcInferService) RecommenderInfer(in *io.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (*grpc_api.RecommendResponse, error) {
+func (s *GrpcServer) recommenderInfer(in *io.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (*grpc_api.RecommendResponse, error) {
 	response := &grpc_api.RecommendResponse{
 		Code: 404,
 	}
@@ -194,7 +169,7 @@ func (g *GrpcInferService) RecommenderInfer(in *io.RecRequest, ServiceConfig *se
 	}
 
 	var responseTf map[string]interface{}
-	if skywalkingWeatherOpen {
+	if s.skywalkingWeatherOpen {
 		responseTf, err = modelinfer.ModelInferSkywalking(nil)
 	} else {
 		responseTf, err = modelinfer.ModelInferNoSkywalking(nil)
@@ -243,7 +218,7 @@ func formatGrpcResponse(itemScore map[string]interface{}, rankCh chan *grpc_api.
 	rankCh <- itemInfo
 }
 
-func (g *GrpcInferService) RecommenderInferReduce(in *io.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (*grpc_api.RecommendResponse, error) {
+func (s *GrpcServer) recommenderInferReduce(in *io.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (*grpc_api.RecommendResponse, error) {
 	response := &grpc_api.RecommendResponse{
 		Code: 404,
 	}
@@ -263,7 +238,7 @@ func (g *GrpcInferService) RecommenderInferReduce(in *io.RecRequest, ServiceConf
 	}
 
 	var responseTf map[string]interface{}
-	if skywalkingWeatherOpen {
+	if s.skywalkingWeatherOpen {
 		responseTf, err = modelinfer.ModelInferSkywalking(nil)
 	} else {
 		responseTf, err = modelinfer.ModelInferNoSkywalking(nil)
