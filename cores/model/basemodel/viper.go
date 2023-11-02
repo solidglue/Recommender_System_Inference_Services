@@ -23,6 +23,10 @@ func init() {
 	viperConfig.SetConfigName(*flagViper.GetConfigName())
 	viperConfig.SetConfigType(*flagViper.GetConfigType())
 	viperConfig.AddConfigPath(*flagViper.GetConfigPath())
+
+	subject = &modelSubject{}
+	baseModelObserver = GetBaseModelInstance()
+	subject.AddObserver(baseModelObserver)
 }
 
 func loadViperConfigFile() {
@@ -45,9 +49,6 @@ func loadViperConfigFile() {
 	}
 
 	// //update bloom filter
-	subject = &modelSubject{}
-	baseModelObserver = GetBaseModelInstance()
-	subject.AddObserver(baseModelObserver)
 	subject.NotifyObservers()
 }
 
