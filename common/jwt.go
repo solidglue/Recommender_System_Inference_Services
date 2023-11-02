@@ -33,7 +33,7 @@ func JwtAuthMiddleware(hd http.Handler) http.Handler {
 		claims := &Claims{}
 		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				err := errors.New("Unexpected signing method.")
+				err := errors.New("unexpected signing method")
 				return nil, err
 			}
 			return jwtKey, nil

@@ -16,35 +16,35 @@ func init() {
 	flagFactory := flags.FlagFactory{}
 	flagHystrix := flagFactory.CreateFlagHystrix()
 
-	timeout := *flagHystrix.GetHystrixTimeoutMs()
-	maxConcurrentRequests := *flagHystrix.GetHystrixMaxConcurrentRequests()
-	requestVolumeThreshold := *flagHystrix.GetHystrixErrorPercentThreshold()
-	sleepWindow := *flagHystrix.GetHystrixSleepWindow()
-	errorPercentThreshold := *flagHystrix.GetHystrixErrorPercentThreshold()
+	hystrixTimeout = *flagHystrix.GetHystrixTimeoutMs()
+	hystrixMaxConcurrentRequests = *flagHystrix.GetHystrixMaxConcurrentRequests()
+	hystrixRequestVolumeThreshold = *flagHystrix.GetHystrixErrorPercentThreshold()
+	hystrixSleepWindow = *flagHystrix.GetHystrixSleepWindow()
+	hystrixErrorPercentThreshold = *flagHystrix.GetHystrixErrorPercentThreshold()
 
 	//all ConfigureCommands use the same conf, we can use different conf if we need.
 	hystrix.ConfigureCommand("dubboServer", hystrix.CommandConfig{
-		Timeout:                timeout,
-		MaxConcurrentRequests:  maxConcurrentRequests,
-		RequestVolumeThreshold: requestVolumeThreshold,
-		SleepWindow:            sleepWindow,
-		ErrorPercentThreshold:  errorPercentThreshold,
+		Timeout:                hystrixTimeout,
+		MaxConcurrentRequests:  hystrixMaxConcurrentRequests,
+		RequestVolumeThreshold: hystrixRequestVolumeThreshold,
+		SleepWindow:            hystrixSleepWindow,
+		ErrorPercentThreshold:  hystrixErrorPercentThreshold,
 	})
 
 	hystrix.ConfigureCommand("restServer", hystrix.CommandConfig{
-		Timeout:                timeout,
-		MaxConcurrentRequests:  maxConcurrentRequests,
-		RequestVolumeThreshold: requestVolumeThreshold,
-		SleepWindow:            sleepWindow,
-		ErrorPercentThreshold:  errorPercentThreshold,
+		Timeout:                hystrixTimeout,
+		MaxConcurrentRequests:  hystrixMaxConcurrentRequests,
+		RequestVolumeThreshold: hystrixRequestVolumeThreshold,
+		SleepWindow:            hystrixSleepWindow,
+		ErrorPercentThreshold:  hystrixErrorPercentThreshold,
 	})
 
 	hystrix.ConfigureCommand("grpcServer", hystrix.CommandConfig{
-		Timeout:                timeout,
-		MaxConcurrentRequests:  maxConcurrentRequests,
-		RequestVolumeThreshold: requestVolumeThreshold,
-		SleepWindow:            sleepWindow,
-		ErrorPercentThreshold:  errorPercentThreshold,
+		Timeout:                hystrixTimeout,
+		MaxConcurrentRequests:  hystrixMaxConcurrentRequests,
+		RequestVolumeThreshold: hystrixRequestVolumeThreshold,
+		SleepWindow:            hystrixSleepWindow,
+		ErrorPercentThreshold:  hystrixErrorPercentThreshold,
 	})
 
 }
