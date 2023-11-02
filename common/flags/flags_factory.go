@@ -155,3 +155,29 @@ func (f *FlagFactory) CreateFlagTensorflow() *flagTensorflow {
 
 	return ft
 }
+
+//bloom factory
+func (f *FlagFactory) CreateFlagBloom() *FlagBloom {
+	userCountLevel := flag.Uint("user_count_level", 100000000, "")
+	itemCountLevel := flag.Uint("item_count_level", 10000000, "")
+
+	ft := getFlagBloomInstance()
+	ft.setUserCountLevel(userCountLevel)
+	ft.setItemCountLevel(itemCountLevel)
+
+	return ft
+}
+
+//viper factory
+func (f *FlagFactory) CreateFlagViper() *FlagViper {
+	configName := flag.String("config_name", "bloom_filter", "")
+	configType := flag.String("config_type", "json", "")
+	configPath := flag.String("configName", "./conf/", "")
+
+	ft := getFlagViperInstance()
+	ft.setConfigName(configName)
+	ft.setConfigType(configType)
+	ft.setConfigPath(configPath)
+
+	return ft
+}
