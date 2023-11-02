@@ -5,12 +5,12 @@ import (
 )
 
 type ModelConfig struct {
-	modelName          string          //model name.
-	tfservingModelName string          //model name of tfserving config list.
-	tfservingGrpcPool  *utils.GRPCPool //tfserving grpc pool.
+	modelName          string          `validate:"required,unique,min=4,max=10"` //model name.
+	tfservingModelName string          `validate:"required,min=4,max=10"`        //model name of tfserving config list.
+	tfservingGrpcPool  *utils.GRPCPool `validate:"required"`                     //tfserving grpc pool.
 	//fieldsSpec         map[string]interface{} //feaure engine conf.
-	userRedisKeyPre string //user feature redis key pre.
-	itemRedisKeyPre string //item feature redis key pre.
+	userRedisKeyPre string `validate:"required,min=4,max=10"` //user feature redis key pre.
+	itemRedisKeyPre string `validate:"required,min=4,max=10"` //item feature redis key pre.
 }
 
 func init() {

@@ -22,11 +22,11 @@ var mt sync.Mutex
 var NacosListedMap = make(map[string]bool, 0)
 
 type NacosConnConfig struct {
-	dataId      string
-	groupId     string
-	namespaceId string
-	ip          string
-	port        uint64
+	dataId      string `validate:"required,unique,min=4,max=10"`
+	groupId     string `validate:"required,min=4,max=20"`
+	namespaceId string `validate:"required"`
+	ip          string `validate:"required,ip"`
+	port        uint64 `validate:"required,min=1,max=65535"`
 }
 
 func init() {
@@ -167,15 +167,15 @@ func (n *NacosConnConfig) serviceConfigUpdate(dataId string, content string) err
 	director.SetConfigBuilder(builder)
 
 	nacosContent := nacosContent{}
-	domain, redisConfStr, modelConfStr, indexConfStr := nacosContent.InputServiceConfigParse(content)
+	redisConfStr, modelConfStr, indexConfStr := nacosContent.InputServiceConfigParse(content)
 
 	var serviceConf service_config_loader.ServiceConfig
 	if indexConfStr == "{}" {
 		//recall
-		serviceConf = director.ServiceConfigUpdateContainIndexDirector(domain, dataId, redisConfStr, modelConfStr, indexConfStr)
+		serviceConf = director.ServiceConfigUpdateContainIndexDirector(dataId, redisConfStr, modelConfStr, indexConfStr)
 	} else {
 		//rank
-		serviceConf = director.ServiceConfigUpdaterNotContainIndexDirector(domain, dataId, redisConfStr, modelConfStr)
+		serviceConf = director.ServiceConfigUpdaterNotContainIndexDirector(dataId, redisConfStr, modelConfStr)
 	}
 
 	service_config_loader.ServiceConfigs[dataId] = &serviceConf

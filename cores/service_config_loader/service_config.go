@@ -9,10 +9,10 @@ import (
 var ServiceConfigs = make(map[string]*ServiceConfig, 0) //one server/dataid,one service conn
 
 type ServiceConfig struct {
-	serviceId        string                               //dataid
-	redisConfig      redis_config_loader.RedisConfig      //redis conn info
+	serviceId        string                               `validate:"required,unique,min=4,max=10"` //dataid
+	redisConfig      redis_config_loader.RedisConfig      `validate:"required"`                     //redis conn info
 	faissIndexConfig faiss_config_loader.FaissIndexConfig //index conn info
-	modelConfig      model_config_loader.ModelConfig      //model conn info
+	modelConfig      model_config_loader.ModelConfig      `validate:"required"` //model conn info
 }
 
 func init() {

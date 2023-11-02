@@ -13,6 +13,8 @@ import (
 	"sync"
 	"time"
 
+	validator "github.com/go-playground/validator/v10"
+
 	_ "dubbo.apache.org/dubbo-go/v3/imports"
 	"github.com/afex/hystrix-go/hystrix"
 )
@@ -107,6 +109,13 @@ func (s *DubboServer) getNacosConn(in *io.RecRequest) nacos_config_listener.Naco
 	nacosConn.SetNamespaceId(namespaceId)
 	nacosConn.SetIp(s.nacosIp)
 	nacosConn.SetPort(uint64(s.nacosPort))
+
+	validate := validator.New()
+	err := validate.Struct(nacosConn)
+	if err != nil {
+		logs.Error(err)
+		return nacos_config_listener.NacosConnConfig{}
+	}
 
 	return nacosConn
 }

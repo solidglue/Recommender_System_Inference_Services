@@ -32,7 +32,7 @@ func (b *ServiceConfigBuilder) FaissConfigBuilder(dataId string, indexConfStr st
 }
 
 // model builder
-func (b *ServiceConfigBuilder) ModelConfigBuilder(domain string, dataId string, modelConfStr string) *ServiceConfigBuilder {
+func (b *ServiceConfigBuilder) ModelConfigBuilder(dataId string, modelConfStr string) *ServiceConfigBuilder {
 	configFactory := &ConfigFactory{}
 	modelConfig := configFactory.createModelConfig(dataId, modelConfStr)
 	b.serviceConfig.setModelConfig(*modelConfig)

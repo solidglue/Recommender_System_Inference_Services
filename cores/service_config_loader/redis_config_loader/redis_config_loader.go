@@ -6,8 +6,7 @@ import (
 )
 
 type RedisConfig struct {
-	domain    string //share redis by domain.
-	redisPool *redis_v8.InferRedisClient
+	redisPool *redis_v8.InferRedisClient `validate:"required"`
 }
 
 // // INFO: singleton instance
@@ -18,15 +17,6 @@ type RedisConfig struct {
 // func getRedisClientInstance() *RedisClient {
 // 	return RedisClientInstance
 // }
-
-// domain
-func (r *RedisConfig) setRedisDomain(domain string) {
-	r.domain = domain
-}
-
-func (r *RedisConfig) GetRedisDomain() string {
-	return r.domain
-}
 
 // redis pool
 func (r *RedisConfig) setRedisPool(redisPool *redis_v8.InferRedisClient) {
@@ -43,7 +33,6 @@ func (r *RedisConfig) ConfigLoad(dataId string, redisConfStr string) error {
 	redisClusterInfo := confMap["redisClusterName"].(map[string]interface{})
 	redisConnPool := redis_v8.NewRedisClusterClient(redisClusterInfo)
 
-	r.setRedisDomain(dataId)
 	r.setRedisPool(redisConnPool)
 
 	return nil

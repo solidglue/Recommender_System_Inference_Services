@@ -6,14 +6,9 @@ import (
 )
 
 type FaissIndexConfig struct {
-	indexName     string                     //index name.
-	faissGrpcPool *utils.GRPCPool            //faiss  grpc pool.
-	faissIndexs   *faiss_index.RecallRequest // faiss index.
-}
-
-// INFO: singleton instance
-func init() {
-
+	indexName     string                     `validate:"required,unique,min=4,max=10"` //index name.
+	faissGrpcPool *utils.GRPCPool            `validate:"required"`                     //faiss  grpc pool.
+	faissIndexs   *faiss_index.RecallRequest `validate:"required"`                     // faiss index.
 }
 
 // index name
