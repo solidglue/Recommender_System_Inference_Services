@@ -26,7 +26,7 @@ func GetItemBloomFilterInstance() *bloom.BloomFilter {
 	return itemBloomFilterInstance
 }
 
-func bloomPush(filter *bloom.BloomFilter, id string) {
+func BloomPush(filter *bloom.BloomFilter, id string) {
 	filter.Add([]byte(id))
 }
 

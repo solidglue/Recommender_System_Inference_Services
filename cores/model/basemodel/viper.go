@@ -1,6 +1,7 @@
-package common
+package basemodel
 
 import (
+	"infer-microservices/common"
 	"infer-microservices/common/flags"
 	"infer-microservices/utils/logs"
 
@@ -11,6 +12,8 @@ import (
 )
 
 var viperConfig *viper.Viper
+var baseModelObserver Observer
+var subject *modelSubject
 
 func init() {
 	flagFactory := flags.FlagFactory{}
@@ -34,12 +37,18 @@ func loadViperConfigFile() {
 	itemIdList := strings.Split(itemIdStr, ",")
 
 	for _, userId := range userIdList {
-		bloomPush(GetUserBloomFilterInstance(), userId)
+		common.BloomPush(common.GetUserBloomFilterInstance(), userId)
 	}
 
 	for _, itemId := range itemIdList {
-		bloomPush(GetUserBloomFilterInstance(), itemId)
+		common.BloomPush(common.GetUserBloomFilterInstance(), itemId)
 	}
+
+	// //update bloom filter
+	subject = &modelSubject{}
+	baseModelObserver = GetBaseModelInstance()
+	subject.AddObserver(baseModelObserver)
+	subject.NotifyObservers()
 }
 
 func WatchBloomConfig() {

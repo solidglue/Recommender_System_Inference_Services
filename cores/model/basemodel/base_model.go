@@ -2,7 +2,9 @@ package basemodel
 
 import (
 	"context"
+
 	"infer-microservices/common"
+
 	faiss_index "infer-microservices/common/faiss_gogofaster"
 	"infer-microservices/common/flags"
 	framework "infer-microservices/common/tensorflow_gogofaster/core/framework"
@@ -22,7 +24,6 @@ var wg sync.WaitGroup
 var tfservingModelVersion int64
 var tfservingTimeout int64
 var baseModelInstance *BaseModel
-
 
 type BaseModel struct {
 	modelName       string
@@ -47,7 +48,6 @@ func init() {
 func GetBaseModelInstance() *BaseModel {
 	return baseModelInstance
 }
-
 
 // modelname
 // userid
@@ -96,6 +96,13 @@ func (b *BaseModel) SetItemBloomFilter(filter *bloom.BloomFilter) {
 
 func (b *BaseModel) GetItemBloomFilter() *bloom.BloomFilter {
 	return b.itemBloomFilter
+}
+
+// observer nontify
+func (b *BaseModel) notify(sub Subject) {
+	//reload baseModel
+	b.SetUserBloomFilter(common.GetUserBloomFilterInstance())
+	b.SetItemBloomFilter(common.GetItemBloomFilterInstance())
 }
 
 // get user tfrecords offline samples
