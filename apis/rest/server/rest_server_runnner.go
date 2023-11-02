@@ -71,7 +71,8 @@ func (s *HttpServer) SetLowerRecallNum(lowerRecallNum int) {
 
 func (s *HttpServer) restNoskywalkingServerRunner(path []string, InferFunc []InferFunc) error {
 	for idx, p := range path {
-		http.HandleFunc(p, InferFunc[idx])
+		//http.HandleFunc(p, InferFunc[idx])
+		http.Handle(p, common.JwtAuthMiddleware(http.HandlerFunc(InferFunc[idx])))
 	}
 
 	cpuNum := runtime.NumCPU()
@@ -105,7 +106,9 @@ func (s *HttpServer) restSkywalkingServerRunner(go2skyAddr string, serverName st
 	route := http.NewServeMux()
 	for idx, p := range path {
 		logs.Info("p InferFunc[]:", p, InferFunc[idx])
-		route.HandleFunc(p, InferFunc[idx])
+		//route.HandleFunc(p, InferFunc[idx])
+		route.Handle(p, common.JwtAuthMiddleware(http.HandlerFunc(InferFunc[idx])))
+
 	}
 
 	cpuNum := runtime.NumCPU()
@@ -129,11 +132,11 @@ func (s *HttpServer) restSkywalkingServerRunner(go2skyAddr string, serverName st
 // @implement start infertace
 func (s *HttpServer) ServerStart() {
 	paths := []string{
-		"/infer",
+		"/login", "/infer",
 	}
 
 	InferFuncs := []InferFunc{
-		s.restInferServer,
+		common.AuthHandler, s.restInferServer,
 	}
 
 	if s.skywalkingWeatherOpen {

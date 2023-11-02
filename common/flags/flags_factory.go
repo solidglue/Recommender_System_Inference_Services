@@ -181,3 +181,13 @@ func (f *FlagFactory) CreateFlagViper() *FlagViper {
 
 	return ft
 }
+
+//jwt factory
+func (f *FlagFactory) CreateFlagJwt() *FlagJwt {
+	jwtKey := flag.String("jwt_key", "im your dad", "")
+
+	ft := getFlagJwtInstance()
+	ft.setJwtKey(jwtKey)
+
+	return ft
+}

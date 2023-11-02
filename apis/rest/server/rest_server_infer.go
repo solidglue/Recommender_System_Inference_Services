@@ -22,7 +22,6 @@ import (
 
 // infer
 func (s *HttpServer) restInferServer(w http.ResponseWriter, r *http.Request) {
-
 	defer func() {
 		if info := recover(); info != nil {
 			logs.Fatal("panic", info)
