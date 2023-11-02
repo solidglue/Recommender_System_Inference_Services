@@ -52,16 +52,18 @@ func restfulServiceStart() {
 }
 
 func main() {
+	//init
 	flag.Parse()
 	logs.InitLog()
 
+	//watch and reset bloom fliter
 	go common.WatchBloomConfig() //0 o'clock start service and load all users and all items into bloom filter.
+	go resetBloom()              //0 o'clock clean bloom filter, every 7 days.
 
+	//start services.
 	go dubboServiceStart()
 	go grpcServiceStart()
 	go restfulServiceStart()
-
-	go resetBloom() //0 o'clock clean bloom filter, every 7 days.
 
 	select {}
 }
