@@ -41,7 +41,9 @@ func (m ModelFactory) CreateInferModel(modelName string, in *io.RecRequest, serv
 		return inferModel, errors.New("userid can not be empty")
 	}
 
-	baseModel = new(basemodel.BaseModel)
+	baseModel = basemodel.GetBaseModelInstance()
+	baseModel.SetUserBloomFilter(common.GetUserBloomFilterInstance())
+	baseModel.SetItemBloomFilter(common.GetItemBloomFilterInstance())
 	baseModel.SetUserId(userId)
 	baseModel.SetServiceConfig(serverConn)
 

@@ -8,11 +8,12 @@ import (
 	framework "infer-microservices/common/tensorflow_gogofaster/core/framework"
 	tfserving "infer-microservices/common/tfserving_gogofaster"
 	"infer-microservices/cores/service_config_loader"
-	"infer-microservices/utils/logs"
-
 	"infer-microservices/utils"
+	"infer-microservices/utils/logs"
 	"sync"
 	"time"
+
+	bloom "github.com/bits-and-blooms/bloom/v3"
 
 	"github.com/gogo/protobuf/types"
 )
@@ -20,11 +21,15 @@ import (
 var wg sync.WaitGroup
 var tfservingModelVersion int64
 var tfservingTimeout int64
+var baseModelInstance *BaseModel
+
 
 type BaseModel struct {
-	modelName     string
-	userId        string
-	serviceConfig *service_config_loader.ServiceConfig
+	modelName       string
+	userId          string
+	serviceConfig   *service_config_loader.ServiceConfig
+	userBloomFilter *bloom.BloomFilter
+	itemBloomFilter *bloom.BloomFilter
 }
 
 func init() {
@@ -33,6 +38,16 @@ func init() {
 	tfservingModelVersion = *flagTensorflow.GetTfservingModelVersion()
 	tfservingTimeout = *flagTensorflow.GetTfservingTimeoutMs()
 }
+
+// singleton instance
+func init() {
+	baseModelInstance = new(BaseModel)
+}
+
+func GetBaseModelInstance() *BaseModel {
+	return baseModelInstance
+}
+
 
 // modelname
 // userid
@@ -67,19 +82,38 @@ func (b *BaseModel) GetInferExampleFeatures() (common.ExampleFeatures, error) {
 
 }
 
+func (b *BaseModel) SetUserBloomFilter(filter *bloom.BloomFilter) {
+	b.userBloomFilter = filter
+}
+
+func (b *BaseModel) GetUserBloomFilter() *bloom.BloomFilter {
+	return b.userBloomFilter
+}
+
+func (b *BaseModel) SetItemBloomFilter(filter *bloom.BloomFilter) {
+	b.itemBloomFilter = filter
+}
+
+func (b *BaseModel) GetItemBloomFilter() *bloom.BloomFilter {
+	return b.itemBloomFilter
+}
+
 // get user tfrecords offline samples
 func (b *BaseModel) GetUserExampleFeatures() (*common.SeqExampleBuff, error) {
-	//TODO: update context features.
-	redisKey := b.serviceConfig.GetModelConfig().GetUserRedisKeyPre() + b.userId
-	userExampleFeats, err := b.serviceConfig.GetRedisConfig().GetRedisPool().Get(redisKey)
+	//INFO: use bloom filter check users, avoid all users search redis.
+
 	userSeqExampleBuff := common.SeqExampleBuff{}
 	userExampleFeatsBuff := make([]byte, 0)
 
-	if err != nil {
-		logs.Error("get item features err", err)
-		return &userSeqExampleBuff, err
-	} else {
-		userExampleFeatsBuff = []byte(userExampleFeats) //.(string)
+	redisKey := b.serviceConfig.GetModelConfig().GetUserRedisKeyPre() + b.userId
+	if b.userBloomFilter.Test([]byte(b.userId)) {
+		userExampleFeats, err := b.serviceConfig.GetRedisConfig().GetRedisPool().Get(redisKey)
+		if err != nil {
+			logs.Error("get item features err", err)
+			return &userSeqExampleBuff, err
+		} else {
+			userExampleFeatsBuff = []byte(userExampleFeats) //.(string)
+		}
 	}
 
 	//protrait features & realtime features.
@@ -93,6 +127,7 @@ func (b *BaseModel) GetUserExampleFeatures() (*common.SeqExampleBuff, error) {
 
 // get user tfrecords online samples
 func (b *BaseModel) GetUserContextExampleFeatures() (*common.SeqExampleBuff, error) {
+	//TODO: use bloom filter check users, avoid all users search redis.
 	userContextSeqExampleBuff := common.SeqExampleBuff{}
 	userContextExampleFeatsBuff := make([]byte, 0)
 

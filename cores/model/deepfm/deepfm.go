@@ -285,23 +285,26 @@ func (d *DeepFM) GetInferExampleFeatures() (common.ExampleFeatures, error) {
 }
 
 func (d *DeepFM) getItemExamplesFeatures() (*[]common.SeqExampleBuff, error) {
+	//TODO: use bloom filter check items, avoid all items search redis.
 	redisKeyPrefix := d.BaseModel.GetServiceConfig().GetModelConfig().GetItemRedisKeyPre()
 	itemSeqExampleBuffs := make([]common.SeqExampleBuff, 0)
 	for _, itemId := range d.itemList {
 		redisKey := redisKeyPrefix + itemId
-		userExampleFeats, err := d.BaseModel.GetServiceConfig().GetRedisConfig().GetRedisPool().Get(redisKey)
-		itemExampleFeatsBuff := make([]byte, 0)
-		if err != nil {
-			return &itemSeqExampleBuffs, nil
-		} else {
-			itemExampleFeatsBuff = []byte(userExampleFeats)
-		}
+		if d.BaseModel.GetItemBloomFilter().Test([]byte(itemId)) {
+			userExampleFeats, err := d.BaseModel.GetServiceConfig().GetRedisConfig().GetRedisPool().Get(redisKey)
+			itemExampleFeatsBuff := make([]byte, 0)
+			if err != nil {
+				return &itemSeqExampleBuffs, nil
+			} else {
+				itemExampleFeatsBuff = []byte(userExampleFeats)
+			}
 
-		itemSeqExampleBuff := common.SeqExampleBuff{
-			Key:  &itemId,
-			Buff: &itemExampleFeatsBuff,
+			itemSeqExampleBuff := common.SeqExampleBuff{
+				Key:  &itemId,
+				Buff: &itemExampleFeatsBuff,
+			}
+			itemSeqExampleBuffs = append(itemSeqExampleBuffs, itemSeqExampleBuff)
 		}
-		itemSeqExampleBuffs = append(itemSeqExampleBuffs, itemSeqExampleBuff)
 	}
 
 	return &itemSeqExampleBuffs, nil
