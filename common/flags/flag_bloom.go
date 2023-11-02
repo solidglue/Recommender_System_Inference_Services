@@ -26,11 +26,11 @@ func (s *FlagBloom) GetUserCountLevel() *uint {
 	return s.userCountLevel
 }
 
-// userCountLevel
-func (s *FlagBloom) setItemCountLevel(userCountLevel *uint) {
-	s.userCountLevel = userCountLevel
+// itemCountLevel
+func (s *FlagBloom) setItemCountLevel(itemCountLevel *uint) {
+	s.itemCountLevel = itemCountLevel
 }
 
 func (s *FlagBloom) GetItemCountLevel() *uint {
-	return s.userCountLevel
+	return s.itemCountLevel
 }
