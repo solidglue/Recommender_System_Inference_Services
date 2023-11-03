@@ -24,7 +24,7 @@ The model inference microservices based on deep learning mainly uses the followi
 The core components of model inference microservices are as follows：
 | Type | Component | Description |
 | --- | --- | --- |
-| Sample | [Recall Samples](https://github.com/solidglue/RecommenderSystems-Inference-Microservices/tree/master/cores/model/basemodel) | Search recall TFRcords format samples from redis cluster, such as dssm model. |
+| Sample | [Recall Samples](https://github.com/solidglue/RecommenderSystems-Inference-Microservices/tree/master/cores/model/dssm) | Search recall TFRcords format samples from redis cluster, such as dssm model. |
 || [Rank Samples](https://github.com/solidglue/RecommenderSystems-Inference-Microservices/tree/master/cores/model/deepfm) |  Search recall TFRcords format samples from redis cluster, such as deepfm model. |
 | Recall | [Get embedding vector](https://github.com/solidglue/RecommenderSystems-Inference-Microservices/tree/master/cores/model/dssm) | Search user's/item's embedding vector from recall model which deployed by tfservig(grpc sevice) , input data is recall samples. |
 |  | [Search index](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/cores/faiss) | Quick search thousands items from faiss index (millions items) service(grpc sevice) . |
