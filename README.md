@@ -30,7 +30,7 @@ The core components of model inference microservices are as follows：
 |  | [Search index](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/cores/faiss) | Quick search thousands items from faiss index (millions items) service(grpc sevice) . |
 | Rank | [Rank](https://github.com/solidglue/RecommenderSystems-Inference-Microservices/tree/master/cores/model/deepfm)  | Rank input items by rank model  which deployed by tfservig(grpc sevice) . |
 | Service | [Config Loader](https://github.com/solidglue/RecommenderSystems-Inference-Microservices/tree/master/cores/service_config_loader) | Sparse service's start config from Naocs, such as grpc info 、 redis info and index info. |
-|  | [Register Services](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/blob/master/apis/dubbo/server/dubbo_server.go) | Register services to Nacos. |
+|  | [Register Services](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/blob/master/apis/dubbo/server/dubbo_server_runner.go) | Register services to Nacos. |
 |  | [Update Services](https://github.com/solidglue/RecommenderSystems-Inference-Microservices/tree/master/cores/nacos_config_listener) | Update services when nacos config files have changed, such as grpc info 、 redis info or index info. |
 |API| [Dubbo](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/apis/dubbo) |Provide Dubbo protocol APIs. |
 || [gRPC](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/apis/grpc) |Provide gRPC protocol APIs. |
