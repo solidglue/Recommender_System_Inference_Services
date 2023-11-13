@@ -8,11 +8,11 @@ import (
 	validator "github.com/go-playground/validator/v10"
 )
 
-type nacosContent struct {
+type NacosContent struct {
 	// author  string  `validate:"required"`
 	// update  string  `validate:"required"`
 	// version string  `validate:"required"`
-	config Config_ `validate:"required"`
+	Config Config_ `validate:"required"`
 }
 
 type Config_ struct {
@@ -22,9 +22,9 @@ type Config_ struct {
 }
 
 // parse service config file, which contains index info、redis info and model info etc.
-func (s *nacosContent) InputServiceConfigParse(content string) (string, string, string) {
-
-	json.Unmarshal([]byte(string(content)), s)
+func (s *NacosContent) InputServiceConfigParse(content string) (string, string, string) {
+	tmpNacos := &NacosContent{}
+	json.Unmarshal([]byte(string(content)), tmpNacos)
 	validate := validator.New()
 	err := validate.Struct(s)
 	if err != nil {
@@ -32,9 +32,9 @@ func (s *nacosContent) InputServiceConfigParse(content string) (string, string, 
 		return "", "", ""
 	}
 
-	redisConfStr := utils.ConvertStructToJson(s.config.redisConfNacos)
-	modelConfStr := utils.ConvertStructToJson(s.config.modelConfNacos)
-	indexConfStr := utils.ConvertStructToJson(s.config.indexConfNacos)
+	redisConfStr := utils.ConvertStructToJson(s.Config.redisConfNacos)
+	modelConfStr := utils.ConvertStructToJson(s.Config.modelConfNacos)
+	indexConfStr := utils.ConvertStructToJson(s.Config.indexConfNacos)
 
 	return redisConfStr, modelConfStr, indexConfStr
 }
