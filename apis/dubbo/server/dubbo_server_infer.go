@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"infer-microservices/apis/io"
 	"infer-microservices/cores/model"
@@ -34,6 +35,14 @@ var recallWg sync.WaitGroup
 func (s *DubboServer) DubboRecommendServer(ctx context.Context, in *io.RecRequest) (*io.RecResponse, error) {
 	response := &io.RecResponse{}
 	response.SetCode(404)
+
+	//check input
+	checkStatus := in.Check()
+	if !checkStatus {
+		err := errors.New("input check failed")
+		logs.Error(err)
+		return response, err
+	}
 
 	//INFO: set timeout by context, degraded service by hystix.
 	ctx, cancelFunc := context.WithTimeout(ctx, time.Millisecond*100)

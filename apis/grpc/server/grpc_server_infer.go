@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 	"infer-microservices/cores/model"
 	"infer-microservices/cores/nacos_config_listener"
@@ -60,20 +61,7 @@ func getGrpcRequestParams(in *grpc_api.RecommendRequest) io.RecRequest {
 	return request
 }
 
-func (s *GrpcServer) getNacosConn(in *grpc_api.RecommendRequest) nacos_config_listener.NacosConnConfig {
-	//nacos listen need follow parms.
-	nacosConn := nacos_config_listener.NacosConnConfig{}
-	nacosConn.SetDataId(in.GetDataId())
-	nacosConn.SetGroupId(in.GetGroupId())
-	nacosConn.SetNamespaceId(in.GetNamespace())
-	nacosConn.SetIp(s.nacosIp)
-	nacosConn.SetPort(uint64(s.nacosPort))
-
-	return nacosConn
-}
-
 func (s *GrpcServer) grpcRecommenderServerContext(ctx context.Context, in *grpc_api.RecommendRequest, respCh chan *grpc_api.RecommendResponse) {
-
 	defer func() {
 		if info := recover(); info != nil {
 			fmt.Println("panic", info)
@@ -100,6 +88,14 @@ func (s *GrpcServer) grpcRecommenderServerContext(ctx context.Context, in *grpc_
 		}
 	}
 	request := getGrpcRequestParams(in)
+	//check input
+	checkStatus := request.Check()
+	if !checkStatus {
+		err := errors.New("input check failed")
+		logs.Error(err)
+		panic(err)
+	}
+
 	response_, err := s.grpcHystrixServer("grpcServer", &request, ServiceConfig)
 	if err != nil {
 		response.Message = fmt.Sprintf("%s", err)
@@ -108,6 +104,18 @@ func (s *GrpcServer) grpcRecommenderServerContext(ctx context.Context, in *grpc_
 		response = response_
 	}
 	respCh <- response
+}
+
+func (s *GrpcServer) getNacosConn(in *grpc_api.RecommendRequest) nacos_config_listener.NacosConnConfig {
+	//nacos listen need follow parms.
+	nacosConn := nacos_config_listener.NacosConnConfig{}
+	nacosConn.SetDataId(in.GetDataId())
+	nacosConn.SetGroupId(in.GetGroupId())
+	nacosConn.SetNamespaceId(in.GetNamespace())
+	nacosConn.SetIp(s.nacosIp)
+	nacosConn.SetPort(uint64(s.nacosPort))
+
+	return nacosConn
 }
 
 func (s *GrpcServer) grpcHystrixServer(serverName string, in *io.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (*grpc_api.RecommendResponse, error) {

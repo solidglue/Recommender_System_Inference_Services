@@ -25,6 +25,7 @@ type HttpServer struct {
 	skywalkingServerName  string
 	lowerRankNum          int
 	lowerRecallNum        int
+	request               *http.Request
 }
 
 // set func

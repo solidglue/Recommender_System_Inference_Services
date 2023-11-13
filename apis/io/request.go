@@ -1,5 +1,11 @@
 package io
 
+import (
+	"errors"
+	"infer-microservices/utils/logs"
+	"strings"
+)
+
 type RecRequest struct {
 	dataId      string //nacos dataid
 	groupId     string
@@ -73,6 +79,37 @@ func (r *RecRequest) GetItemList() []string {
 	return r.itemList
 }
 
-func (req *RecRequest) JavaClassName() string {
+func (r *RecRequest) JavaClassName() string {
 	return "com.xxx.www.infer.RecRequest"
+}
+
+func (r *RecRequest) Check() bool {
+	//check dataid
+	if r.dataId == "" {
+		err := errors.New("dataid can not be empty")
+		logs.Error(err)
+		return false
+	}
+
+	//check userid
+	if r.userId == "" {
+		err := errors.New("userid can not be empty")
+		logs.Error(err)
+		return false
+	}
+
+	if r.recallNum > 1000 {
+		err := errors.New("recallNum should less than 2000 ")
+		logs.Error(err)
+		return false
+	}
+
+	//itemList
+	if strings.ToLower(r.modelType) == "rank" && len(r.itemList) > 200 {
+		err := errors.New("itemList's len should less than 300 ")
+		logs.Error(err)
+		return false
+	}
+
+	return true
 }

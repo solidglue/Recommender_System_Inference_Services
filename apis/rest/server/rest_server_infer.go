@@ -43,30 +43,25 @@ func (s *HttpServer) restInferServer(w http.ResponseWriter, r *http.Request) {
 	rsp := make(map[string]interface{}, 0)
 	rsp["code"] = 200
 
-	err := r.ParseForm()
-	if err != nil {
-		rsp["code"] = 404
-		rsp["error"] = errors.New("ParseForm Error")
-		panic(err)
-	}
-
-	method := r.Method
-	if method != "POST" {
-		rsp["code"] = 404
-		rsp["error"] = errors.New("method should be POST")
-		panic(err)
-
-	}
-
-	data := r.Form["data"]
-	if len(data) == 0 {
-		rsp["code"] = 404
-		rsp["error"] = errors.New("emt input data")
+	//check http input
+	checkStatus := s.Check()
+	if !checkStatus {
+		err := errors.New("http input check failed")
+		logs.Error(err)
 		panic(err)
 	}
 
 	//INFO: convert http string data to struct data.
-	request, err := httpRequstParse(r)
+	request, err := s.httpRequstParse(r)
+
+	//check input
+	checkStatus = request.Check()
+	if !checkStatus {
+		err := errors.New("input check failed")
+		logs.Error(err)
+		panic(err)
+	}
+
 	if err != nil {
 		logs.Error(err)
 		panic(err)
@@ -85,63 +80,35 @@ func (s *HttpServer) restInferServer(w http.ResponseWriter, r *http.Request) {
 	w.Write(buff)
 }
 
-func httpRequstParse(r *http.Request) (io.RecRequest, error) {
-	request := io.RecRequest{}
-
-	err := r.ParseForm()
+func (s *HttpServer) Check() bool {
+	err := s.request.ParseForm()
 	if err != nil {
-		return request, err
+		logs.Error(err)
+		return false
 	}
 
-	method := r.Method
+	method := s.request.Method
 	if method != "POST" {
-		return request, err
+		logs.Error(err)
+		return false
 	}
 
-	data := r.Form["data"]
+	data := s.request.Form["data"]
 	if len(data) == 0 {
-		return request, err
+		logs.Error(err)
+		return false
 	}
 
-	requestMap := make(map[string]interface{}, 0)
-	err = jsoniter.Unmarshal([]byte(data[0]), &requestMap)
-	if err != nil {
-		return request, err
-	}
-
-	request, err = inputCheck(requestMap)
-	if err != nil {
-		return request, err
-	}
-
-	return request, nil
+	return true
 }
 
-func inputCheck(requestMap map[string]interface{}) (io.RecRequest, error) {
+func (s *HttpServer) httpRequstParse(r *http.Request) (io.RecRequest, error) {
 	request := io.RecRequest{}
-
-	//dataId
-	dataId, ok := requestMap["dataId"]
-	if ok {
-		request.SetDataId(dataId.(string))
-	} else {
-		return request, errors.New("dataId can not be empty")
-	}
-
-	//modelType
-	modelType, ok := requestMap["modelType"]
-	if ok {
-		request.SetModelType(modelType.(string))
-	} else {
-		return request, errors.New("modelType can not be empty")
-	}
-
-	//userId
-	userId, ok := requestMap["userId"]
-	if ok {
-		request.SetUserId(userId.(string))
-	} else {
-		return request, errors.New("userId can not be empty")
+	data := s.request.Form["data"]
+	requestMap := make(map[string]interface{}, 0)
+	err := jsoniter.Unmarshal([]byte(data[0]), &requestMap)
+	if err != nil {
+		return request, err
 	}
 
 	//INFO:the recallNum param from http request,maybe int/ float /string。 user reflect to convert to int32.
@@ -150,45 +117,22 @@ func inputCheck(requestMap map[string]interface{}) (io.RecRequest, error) {
 	recallNumTypeKind := recallNumType.Kind()
 	switch recallNumTypeKind {
 	case reflect.String:
-		recallNumStr, ok0 := requestMap["recallNum"].(string)
-		if ok0 {
+		recallNumStr, ok := requestMap["recallNum"].(string)
+		if ok {
 			recallNum64, err := strconv.ParseInt(recallNumStr, 10, 64)
 			if err != nil {
-				ok = false
+				logs.Error(err)
 			} else {
 				recallNum = int32(recallNum64)
-				ok = true
 			}
 		}
 	case reflect.Float32, reflect.Float64, reflect.Int16, reflect.Int, reflect.Int64, reflect.Int8,
 		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		recallNum, ok = requestMap["recallNum"].(int32)
+		recallNum, _ = requestMap["recallNum"].(int32)
 	default:
-		err := errors.New("unkown type, set recallnum to 100")
-		logs.Error(err)
+		logs.Info("unkown type, set recallnum to 100")
 	}
-
-	if ok {
-		request.SetRecallNum(recallNum)
-	} else {
-		return request, errors.New("dataId can not be empty")
-	}
-
-	if recallNum > 1000 {
-		return request, errors.New("recallNum should less than 1000 ")
-	}
-
-	//itemList
-	itemList, ok := requestMap["itemList"].([]string)
-	if ok {
-		request.SetItemList(itemList)
-	} else {
-		return request, errors.New("itemList can not be empty")
-	}
-
-	if len(itemList) > 200 {
-		return request, errors.New("itemList's len should less than 200 ")
-	}
+	request.SetRecallNum(recallNum)
 
 	return request, nil
 }
