@@ -197,7 +197,7 @@ func (s *HttpServer) restHystrixInfer(serverName string, r *http.Request, in *io
 	response := make(map[string]interface{}, 0)
 	hystrixErr := hystrix.Do(serverName, func() error {
 		// request recall / rank func.
-		response_, err := s.recommenderInferReduce(r, in, ServiceConfig)
+		response_, err := s.recommenderInfer(r, in, ServiceConfig)
 		if err != nil {
 			logs.Error(err)
 		} else {
@@ -258,16 +258,17 @@ func (s *HttpServer) recommenderInfer(r *http.Request, in *io.RecRequest, Servic
 		modelName = strings.ToLower(modelName)
 	}
 
-	modelfactory := model.ModelFactory{}
-	modelinfer, err := modelfactory.CreateInferModel(modelName, in, ServiceConfig)
-	if err != nil {
-		return response, err
-	}
+	//strategy pattern
+	modelfactory := model.ModelStrategyFactory{}
+	modelStrategyContext := model.ModelStrategyContext{}
+	modelStrategy := modelfactory.CreateModelStrategy(modelName, in, ServiceConfig)
+	modelStrategyContext.SetModelStrategy(modelStrategy)
 
+	var err error
 	if s.skywalkingWeatherOpen {
-		response, err = modelinfer.ModelInferSkywalking(r)
+		response, err = modelStrategyContext.ModelInferSkywalking(r)
 	} else {
-		response, err = modelinfer.ModelInferNoSkywalking(r)
+		response, err = modelStrategyContext.ModelInferNoSkywalking(r)
 	}
 	if err != nil {
 		logs.Error(err)
@@ -309,16 +310,17 @@ func (s *HttpServer) recommenderInferReduce(r *http.Request, in *io.RecRequest, 
 
 	modelName := "fm" //fm model use to reduce
 
-	modelfactory := model.ModelFactory{}
-	modelinfer, err := modelfactory.CreateInferModel(modelName, in, ServiceConfig)
-	if err != nil {
-		return response, err
-	}
+	//strategy pattern
+	modelfactory := model.ModelStrategyFactory{}
+	modelStrategy := modelfactory.CreateModelStrategy(modelName, in, ServiceConfig)
+	modelStrategyContext := model.ModelStrategyContext{}
+	modelStrategyContext.SetModelStrategy(modelStrategy)
 
+	var err error
 	if s.skywalkingWeatherOpen {
-		response, err = modelinfer.ModelInferSkywalking(r)
+		response, err = modelStrategyContext.ModelInferSkywalking(r)
 	} else {
-		response, err = modelinfer.ModelInferNoSkywalking(r)
+		response, err = modelStrategyContext.ModelInferNoSkywalking(r)
 	}
 	if err != nil {
 		logs.Error(err)

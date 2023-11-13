@@ -162,21 +162,22 @@ func (s *GrpcServer) recommenderInfer(in *io.RecRequest, ServiceConfig *service_
 		modelName = strings.ToLower(modelName)
 	}
 
-	modelfactory := model.ModelFactory{}
-	modelinfer, err := modelfactory.CreateInferModel(modelName, in, ServiceConfig)
-	if err != nil {
-		return response, err
-	}
+	//strategy pattern
+	modelfactory := model.ModelStrategyFactory{}
+	modelStrategy := modelfactory.CreateModelStrategy(modelName, in, ServiceConfig)
+	modelStrategyContext := model.ModelStrategyContext{}
+	modelStrategyContext.SetModelStrategy(modelStrategy)
 
+	var err error
 	var responseTf map[string]interface{}
-	if s.skywalkingWeatherOpen {
-		responseTf, err = modelinfer.ModelInferSkywalking(nil)
-	} else {
-		responseTf, err = modelinfer.ModelInferNoSkywalking(nil)
-	}
 
+	if s.skywalkingWeatherOpen {
+		responseTf, err = modelStrategyContext.ModelInferSkywalking(nil)
+	} else {
+		responseTf, err = modelStrategyContext.ModelInferNoSkywalking(nil)
+	}
 	if err != nil {
-		logs.Error("request tfserving fail:", responseTf)
+		logs.Error(err)
 		return response, err
 	}
 
@@ -231,21 +232,15 @@ func (s *GrpcServer) recommenderInferReduce(in *io.RecRequest, ServiceConfig *se
 
 	modelName := "fm"
 
-	modelfactory := model.ModelFactory{}
-	modelinfer, err := modelfactory.CreateInferModel(modelName, in, ServiceConfig)
-	if err != nil {
-		return response, err
-	}
+	//strategy pattern
+	modelfactory := model.ModelStrategyFactory{}
+	modelStrategy := modelfactory.CreateModelStrategy(modelName, in, ServiceConfig)
+	modelStrategyContext := model.ModelStrategyContext{}
+	modelStrategyContext.SetModelStrategy(modelStrategy)
 
-	var responseTf map[string]interface{}
-	if s.skywalkingWeatherOpen {
-		responseTf, err = modelinfer.ModelInferSkywalking(nil)
-	} else {
-		responseTf, err = modelinfer.ModelInferNoSkywalking(nil)
-	}
-
+	responseTf, err := modelStrategyContext.ModelInferSkywalking(nil)
 	if err != nil {
-		logs.Error("request tfserving fail:", responseTf)
+		logs.Error(err)
 		return response, err
 	}
 

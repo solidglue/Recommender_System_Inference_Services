@@ -169,16 +169,15 @@ func (s *DubboServer) recommenderInfer(in *io.RecRequest, ServiceConfig *service
 		modelName = strings.ToLower(modelName)
 	}
 
-	modelfactory := model.ModelFactory{}
-	request := getRequestParams(in)
-	modelinfer, err := modelfactory.CreateInferModel(modelName, &request, ServiceConfig)
+	//strategy pattern
+	modelfactory := model.ModelStrategyFactory{}
+	modelStrategy := modelfactory.CreateModelStrategy(modelName, in, ServiceConfig)
+	modelStrategyContext := model.ModelStrategyContext{}
+	modelStrategyContext.SetModelStrategy(modelStrategy)
+
+	result, err := modelStrategyContext.ModelInferSkywalking(nil)
 	if err != nil {
-		return response, err
-	}
-	//close go2sky in dubbo service .
-	//TODO: get go2sky config from config file.
-	result, err := modelinfer.ModelInferNoSkywalking(nil) // d.dssmm.ModelInferNoSkywalking(nil)
-	if err != nil {
+		logs.Error(err)
 		return response, err
 	}
 
@@ -250,16 +249,15 @@ func (s *DubboServer) recommenderInferReduce(in *io.RecRequest, ServiceConfig *s
 
 	modelName := "fm"
 
-	modelfactory := model.ModelFactory{}
-	request := getRequestParams(in)
-	modelinfer, err := modelfactory.CreateInferModel(modelName, &request, ServiceConfig)
+	//strategy pattern
+	modelfactory := model.ModelStrategyFactory{}
+	modelStrategy := modelfactory.CreateModelStrategy(modelName, in, ServiceConfig)
+	modelStrategyContext := model.ModelStrategyContext{}
+	modelStrategyContext.SetModelStrategy(modelStrategy)
+
+	result, err := modelStrategyContext.ModelInferSkywalking(nil)
 	if err != nil {
-		return response, err
-	}
-	//close go2sky in dubbo service .
-	//TODO: get go2sky config from config file.
-	result, err := modelinfer.ModelInferNoSkywalking(nil) // d.dssmm.ModelInferNoSkywalking(nil)
-	if err != nil {
+		logs.Error(err)
 		return response, err
 	}
 
