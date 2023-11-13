@@ -49,18 +49,6 @@ func (g *GrpcServer) GrpcRecommendServer(ctx context.Context, in *grpc_api.Recom
 	}
 }
 
-func getGrpcRequestParams(in *grpc_api.RecommendRequest) io.RecRequest {
-	request := io.RecRequest{}
-	request.SetDataId(in.GetDataId())
-	request.SetGroupId(in.GetGroupId())
-	request.SetNamespaceId(in.GetNamespace())
-	request.SetUserId(in.UserId)
-	request.SetRecallNum(in.RecallNum)
-	request.SetItemList(in.ItemList.Value)
-
-	return request
-}
-
 func (s *GrpcServer) grpcRecommenderServerContext(ctx context.Context, in *grpc_api.RecommendRequest, respCh chan *grpc_api.RecommendResponse) {
 	defer func() {
 		if info := recover(); info != nil {
@@ -74,26 +62,28 @@ func (s *GrpcServer) grpcRecommenderServerContext(ctx context.Context, in *grpc_
 		Code: 404,
 	}
 
-	nacosConn := s.getNacosConn(in)
-	dataId := in.GetDataId()
-	ServiceConfig := service_config_loader.ServiceConfigs[dataId]
-	_, ok := nacos_config_listener.NacosListedMap[dataId]
-	if !ok {
-		err := nacosConn.ServiceConfigListen()
-		if err != nil {
-			logs.Error(err)
-			panic(err)
-		} else {
-			nacos_config_listener.NacosListedMap[dataId] = true
-		}
-	}
-	request := getGrpcRequestParams(in)
+	request := convertGrpcRequestToRecRequest(in)
 	//check input
 	checkStatus := request.Check()
 	if !checkStatus {
 		err := errors.New("input check failed")
 		logs.Error(err)
 		panic(err)
+	}
+
+	nacosFactory := nacos_config_listener.NacosFactory{}
+	nacosConfig := nacosFactory.CreateNacosConfig(s.nacosIp, uint64(s.nacosPort), &request)
+	dataId := in.GetDataId()
+	ServiceConfig := service_config_loader.ServiceConfigs[dataId]
+	_, ok := nacos_config_listener.NacosListedMap[dataId]
+	if !ok {
+		err := nacosConfig.ServiceConfigListen()
+		if err != nil {
+			logs.Error(err)
+			panic(err)
+		} else {
+			nacos_config_listener.NacosListedMap[dataId] = true
+		}
 	}
 
 	response_, err := s.grpcHystrixServer("grpcServer", &request, ServiceConfig)
@@ -106,16 +96,16 @@ func (s *GrpcServer) grpcRecommenderServerContext(ctx context.Context, in *grpc_
 	respCh <- response
 }
 
-func (s *GrpcServer) getNacosConn(in *grpc_api.RecommendRequest) nacos_config_listener.NacosConnConfig {
-	//nacos listen need follow parms.
-	nacosConn := nacos_config_listener.NacosConnConfig{}
-	nacosConn.SetDataId(in.GetDataId())
-	nacosConn.SetGroupId(in.GetGroupId())
-	nacosConn.SetNamespaceId(in.GetNamespace())
-	nacosConn.SetIp(s.nacosIp)
-	nacosConn.SetPort(uint64(s.nacosPort))
+func convertGrpcRequestToRecRequest(in *grpc_api.RecommendRequest) io.RecRequest {
+	request := io.RecRequest{}
+	request.SetDataId(in.GetDataId())
+	request.SetGroupId(in.GetGroupId())
+	request.SetNamespaceId(in.GetNamespace())
+	request.SetUserId(in.UserId)
+	request.SetRecallNum(in.RecallNum)
+	request.SetItemList(in.ItemList.Value)
 
-	return nacosConn
+	return request
 }
 
 func (s *GrpcServer) grpcHystrixServer(serverName string, in *io.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (*grpc_api.RecommendResponse, error) {
@@ -214,19 +204,6 @@ func (s *GrpcServer) recommenderInfer(in *io.RecRequest, ServiceConfig *service_
 	return response, nil
 }
 
-func formatGrpcResponse(itemScore map[string]interface{}, rankCh chan *grpc_api.ItemInfo) {
-	defer inferWg.Done()
-
-	itemid := itemScore["itemid"].(string)
-	score := float32(itemScore["score"].(float64))
-	itemInfo := &grpc_api.ItemInfo{
-		Itemid: itemid,
-		Score:  score,
-	}
-
-	rankCh <- itemInfo
-}
-
 func (s *GrpcServer) recommenderInferReduce(in *io.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (*grpc_api.RecommendResponse, error) {
 	response := &grpc_api.RecommendResponse{
 		Code: 404,
@@ -275,4 +252,17 @@ func (s *GrpcServer) recommenderInferReduce(in *io.RecRequest, ServiceConfig *se
 	}
 
 	return response, nil
+}
+
+func formatGrpcResponse(itemScore map[string]interface{}, rankCh chan *grpc_api.ItemInfo) {
+	defer inferWg.Done()
+
+	itemid := itemScore["itemid"].(string)
+	score := float32(itemScore["score"].(float64))
+	itemInfo := &grpc_api.ItemInfo{
+		Itemid: itemid,
+		Score:  score,
+	}
+
+	rankCh <- itemInfo
 }

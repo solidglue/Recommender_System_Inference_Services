@@ -50,7 +50,7 @@ func (s *HttpServer) restInferServer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//INFO: convert http string data to struct data.
-	request, err := s.httpRequstParse(r)
+	request, err := s.convertHttpRequstToRecRequest(r)
 
 	//check input
 	checkStatus = request.Check()
@@ -65,7 +65,21 @@ func (s *HttpServer) restInferServer(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
+	nacosFactory := nacos_config_listener.NacosFactory{}
+	nacosConfig := nacosFactory.CreateNacosConfig(s.nacosIp, uint64(s.nacosPort), &request)
 	ServiceConfig := service_config_loader.ServiceConfigs[request.GetDataId()]
+	dataId := nacosConfig.GetDataId()
+	_, ok := nacos_config_listener.NacosListedMap[dataId]
+	if !ok {
+		err := nacosConfig.ServiceConfigListen()
+		if err != nil {
+			logs.Error(err)
+			panic(err)
+		} else {
+			nacos_config_listener.NacosListedMap[dataId] = true
+		}
+	}
+
 	response, err := s.restHystrixInfer("restServer", r, &request, ServiceConfig)
 	if err != nil {
 		logs.Error(err)
@@ -100,7 +114,7 @@ func (s *HttpServer) Check() bool {
 	return true
 }
 
-func (s *HttpServer) httpRequstParse(r *http.Request) (io.RecRequest, error) {
+func (s *HttpServer) convertHttpRequstToRecRequest(r *http.Request) (io.RecRequest, error) {
 	request := io.RecRequest{}
 	data := s.request.Form["data"]
 	requestMap := make(map[string]interface{}, 0)
@@ -150,27 +164,6 @@ func (s *HttpServer) restHystrixInfer(serverName string, r *http.Request, in *io
 func (s *HttpServer) recommenderInfer(r *http.Request, in *io.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (map[string]interface{}, error) {
 	response := make(map[string]interface{}, 0)
 
-	dataId := in.GetDataId()
-	groupId := in.GetGroupId()
-	namespaceId := in.GetNamespaceId()
-
-	nacosConn := nacos_config_listener.NacosConnConfig{}
-	nacosConn.SetDataId(dataId)
-	nacosConn.SetGroupId(groupId)
-	nacosConn.SetNamespaceId(namespaceId)
-	nacosConn.SetIp(s.nacosIp)
-	nacosConn.SetPort(uint64(s.nacosPort))
-
-	_, ok := nacos_config_listener.NacosListedMap[dataId]
-	if !ok {
-		err := nacosConn.ServiceConfigListen()
-		if err != nil {
-			return response, err
-		} else {
-			nacos_config_listener.NacosListedMap[dataId] = true
-		}
-	}
-
 	//build model by model_factory
 	modelName := in.GetModelType()
 	if modelName != "" {
@@ -199,27 +192,6 @@ func (s *HttpServer) recommenderInfer(r *http.Request, in *io.RecRequest, Servic
 
 func (s *HttpServer) recommenderInferReduce(r *http.Request, in *io.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (map[string]interface{}, error) {
 	response := make(map[string]interface{}, 0)
-
-	dataId := in.GetDataId()
-	groupId := in.GetGroupId()
-	namespaceId := in.GetNamespaceId()
-
-	nacosConn := nacos_config_listener.NacosConnConfig{}
-	nacosConn.SetDataId(dataId)
-	nacosConn.SetGroupId(groupId)
-	nacosConn.SetNamespaceId(namespaceId)
-	nacosConn.SetIp(s.nacosIp)
-	nacosConn.SetPort(uint64(s.nacosPort))
-
-	_, ok := nacos_config_listener.NacosListedMap[dataId]
-	if !ok {
-		err := nacosConn.ServiceConfigListen()
-		if err != nil {
-			return response, err
-		} else {
-			nacos_config_listener.NacosListedMap[dataId] = true
-		}
-	}
 
 	//build model by model_factory
 	// modelName := in.GetModelType()

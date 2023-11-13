@@ -14,8 +14,6 @@ import (
 	"sync"
 	"time"
 
-	validator "github.com/go-playground/validator/v10"
-
 	_ "dubbo.apache.org/dubbo-go/v3/imports"
 	"github.com/afex/hystrix-go/hystrix"
 )
@@ -81,12 +79,13 @@ func (s *DubboServer) dubboRecommenderServerContext(ctx context.Context, in *io.
 	response := &io.RecResponse{}
 	response.SetCode(404)
 
-	nacosConn := s.getNacosConn(in)
+	nacosFactory := nacos_config_listener.NacosFactory{}
+	nacosConfig := nacosFactory.CreateNacosConfig(s.nacosIp, uint64(s.nacosPort), in)
 	ServiceConfig := service_config_loader.ServiceConfigs[in.GetDataId()]
-	dataId := nacosConn.GetDataId()
+	dataId := nacosConfig.GetDataId()
 	_, ok := nacos_config_listener.NacosListedMap[dataId]
 	if !ok {
-		err := nacosConn.ServiceConfigListen()
+		err := nacosConfig.ServiceConfigListen()
 		if err != nil {
 			logs.Error(err)
 			panic(err)
@@ -104,29 +103,6 @@ func (s *DubboServer) dubboRecommenderServerContext(ctx context.Context, in *io.
 	}
 
 	respCh <- response
-}
-
-func (s *DubboServer) getNacosConn(in *io.RecRequest) nacos_config_listener.NacosConnConfig {
-	//nacos listen need follow parms.
-	nacosConn := nacos_config_listener.NacosConnConfig{}
-	dataId := in.GetDataId()
-	groupId := in.GetGroupId()
-	namespaceId := in.GetNamespaceId()
-
-	nacosConn.SetDataId(dataId)
-	nacosConn.SetGroupId(groupId)
-	nacosConn.SetNamespaceId(namespaceId)
-	nacosConn.SetIp(s.nacosIp)
-	nacosConn.SetPort(uint64(s.nacosPort))
-
-	validate := validator.New()
-	err := validate.Struct(nacosConn)
-	if err != nil {
-		logs.Error(err)
-		return nacos_config_listener.NacosConnConfig{}
-	}
-
-	return nacosConn
 }
 
 func (s *DubboServer) dubboHystrixServer(serverName string, in *io.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (*io.RecResponse, error) {
@@ -215,37 +191,6 @@ func (s *DubboServer) recommenderInfer(in *io.RecRequest, ServiceConfig *service
 	return response, nil
 }
 
-func getRequestParams(in *io.RecRequest) io.RecRequest {
-	request := io.RecRequest{}
-	dataId := in.GetDataId()
-	groupId := in.GetGroupId()
-	namespaceId := in.GetNamespaceId()
-	userId := in.GetUserId()
-	itemList := in.GetItemList()
-
-	request.SetDataId(dataId)
-	request.SetGroupId(groupId)
-	request.SetNamespaceId(namespaceId)
-	request.SetUserId(userId)
-	request.SetItemList(itemList)
-
-	return request
-}
-
-func formatDubboResponse(itemScore map[string]interface{}, recallCh chan string) {
-	defer recallWg.Done()
-
-	itemId := itemScore["itemid"].(string)
-	score := float32(itemScore["score"].(float64))
-
-	itemInfo := io.ItemInfo{}
-	itemInfo.SetItemId(itemId)
-	itemInfo.SetScore(score)
-
-	itemScoreStr := utils.ConvertStructToJson(itemInfo)
-	recallCh <- itemScoreStr
-}
-
 func (s *DubboServer) recommenderInferReduce(in *io.RecRequest, ServiceConfig *service_config_loader.ServiceConfig) (*io.RecResponse, error) {
 	response := &io.RecResponse{}
 	response.SetCode(404)
@@ -293,4 +238,18 @@ func (s *DubboServer) recommenderInferReduce(in *io.RecRequest, ServiceConfig *s
 	}
 
 	return response, nil
+}
+
+func formatDubboResponse(itemScore map[string]interface{}, recallCh chan string) {
+	defer recallWg.Done()
+
+	itemId := itemScore["itemid"].(string)
+	score := float32(itemScore["score"].(float64))
+
+	itemInfo := io.ItemInfo{}
+	itemInfo.SetItemId(itemId)
+	itemInfo.SetScore(score)
+
+	itemScoreStr := utils.ConvertStructToJson(itemInfo)
+	recallCh <- itemScoreStr
 }
