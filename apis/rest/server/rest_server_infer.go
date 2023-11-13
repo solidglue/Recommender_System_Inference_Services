@@ -51,16 +51,15 @@ func (s *HttpServer) restInferServer(w http.ResponseWriter, r *http.Request) {
 
 	//INFO: convert http string data to struct data.
 	request, err := s.convertHttpRequstToRecRequest(r)
+	if err != nil {
+		logs.Error(err)
+		panic(err)
+	}
 
 	//check input
 	checkStatus = request.Check()
 	if !checkStatus {
 		err := errors.New("input check failed")
-		logs.Error(err)
-		panic(err)
-	}
-
-	if err != nil {
 		logs.Error(err)
 		panic(err)
 	}
