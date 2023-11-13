@@ -64,21 +64,13 @@ func (s *HttpServer) restInferServer(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
+	//nacos listen
 	nacosFactory := nacos_config_listener.NacosFactory{}
 	nacosConfig := nacosFactory.CreateNacosConfig(s.nacosIp, uint64(s.nacosPort), &request)
-	ServiceConfig := service_config_loader.ServiceConfigs[request.GetDataId()]
-	dataId := nacosConfig.GetDataId()
-	_, ok := nacos_config_listener.NacosListedMap[dataId]
-	if !ok {
-		err := nacosConfig.ServiceConfigListen()
-		if err != nil {
-			logs.Error(err)
-			panic(err)
-		} else {
-			nacos_config_listener.NacosListedMap[dataId] = true
-		}
-	}
+	nacosConfig.StartListenNacos()
 
+	//infer
+	ServiceConfig := service_config_loader.ServiceConfigs[request.GetDataId()]
 	response, err := s.restHystrixInfer("restServer", r, &request, ServiceConfig)
 	if err != nil {
 		logs.Error(err)

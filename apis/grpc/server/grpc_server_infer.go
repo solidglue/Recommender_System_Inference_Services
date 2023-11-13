@@ -71,21 +71,13 @@ func (s *GrpcServer) grpcRecommenderServerContext(ctx context.Context, in *grpc_
 		panic(err)
 	}
 
+	//nacos listen
 	nacosFactory := nacos_config_listener.NacosFactory{}
 	nacosConfig := nacosFactory.CreateNacosConfig(s.nacosIp, uint64(s.nacosPort), &request)
-	dataId := in.GetDataId()
-	ServiceConfig := service_config_loader.ServiceConfigs[dataId]
-	_, ok := nacos_config_listener.NacosListedMap[dataId]
-	if !ok {
-		err := nacosConfig.ServiceConfigListen()
-		if err != nil {
-			logs.Error(err)
-			panic(err)
-		} else {
-			nacos_config_listener.NacosListedMap[dataId] = true
-		}
-	}
+	nacosConfig.StartListenNacos()
 
+	//infer
+	ServiceConfig := service_config_loader.ServiceConfigs[in.GetDataId()]
 	response_, err := s.grpcHystrixServer("grpcServer", &request, ServiceConfig)
 	if err != nil {
 		response.Message = fmt.Sprintf("%s", err)

@@ -86,7 +86,20 @@ func (r *NacosConnConfig) GetPort() uint64 {
 	return r.port
 }
 
-func (n *NacosConnConfig) ServiceConfigListen() error {
+func (n *NacosConnConfig) StartListenNacos() {
+	_, ok := NacosListedMap[n.dataId]
+	if !ok {
+		err := n.serviceConfigListen()
+		if err != nil {
+			logs.Error(err)
+			panic(err)
+		} else {
+			NacosListedMap[n.dataId] = true
+		}
+	}
+}
+
+func (n *NacosConnConfig) serviceConfigListen() error {
 	nacosClient, err := n.getNacosClient()
 	if err != nil {
 		return err

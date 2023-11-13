@@ -79,21 +79,13 @@ func (s *DubboServer) dubboRecommenderServerContext(ctx context.Context, in *io.
 	response := &io.RecResponse{}
 	response.SetCode(404)
 
+	//nacos listen
 	nacosFactory := nacos_config_listener.NacosFactory{}
 	nacosConfig := nacosFactory.CreateNacosConfig(s.nacosIp, uint64(s.nacosPort), in)
-	ServiceConfig := service_config_loader.ServiceConfigs[in.GetDataId()]
-	dataId := nacosConfig.GetDataId()
-	_, ok := nacos_config_listener.NacosListedMap[dataId]
-	if !ok {
-		err := nacosConfig.ServiceConfigListen()
-		if err != nil {
-			logs.Error(err)
-			panic(err)
-		} else {
-			nacos_config_listener.NacosListedMap[dataId] = true
-		}
-	}
+	nacosConfig.StartListenNacos()
 
+	//infer
+	ServiceConfig := service_config_loader.ServiceConfigs[in.GetDataId()]
 	response_, err := s.dubboHystrixServer("dubboServer", in, ServiceConfig)
 	if err != nil {
 		response.SetMessage(fmt.Sprintf("%s", err))
@@ -170,19 +162,16 @@ func (s *DubboServer) recommenderInfer(in *io.RecRequest, ServiceConfig *service
 	itemsScores := make([]string, 0)
 	resultList := result["data"].([]map[string]interface{})
 	recallCh := make(chan string, len(resultList))
-
 	if len(resultList) > 0 {
 		for i := 0; i < len(resultList); i++ {
 			recallWg.Add(1)
 			go formatDubboResponse(resultList[i], recallCh)
 		}
-
 		recallWg.Wait()
 		close(recallCh)
 		for itemScore := range recallCh {
 			itemsScores = append(itemsScores, itemScore)
 		}
-
 		response.SetCode(200)
 		response.SetMessage("success")
 		response.SetData(itemsScores)
@@ -208,13 +197,11 @@ func (s *DubboServer) recommenderInferReduce(in *io.RecRequest, ServiceConfig *s
 	modelStrategy := modelfactory.CreateModelStrategy(modelName, in, ServiceConfig)
 	modelStrategyContext := model.ModelStrategyContext{}
 	modelStrategyContext.SetModelStrategy(modelStrategy)
-
 	result, err := modelStrategyContext.ModelInferSkywalking(nil)
 	if err != nil {
 		logs.Error(err)
 		return response, err
 	}
-
 	//package infer result.
 	itemsScores := make([]string, 0)
 	resultList := result["data"].([]map[string]interface{})
@@ -225,13 +212,11 @@ func (s *DubboServer) recommenderInferReduce(in *io.RecRequest, ServiceConfig *s
 			recallWg.Add(1)
 			go formatDubboResponse(resultList[i], recallCh)
 		}
-
 		recallWg.Wait()
 		close(recallCh)
 		for itemScore := range recallCh {
 			itemsScores = append(itemsScores, itemScore)
 		}
-
 		response.SetCode(200)
 		response.SetMessage("success")
 		response.SetData(itemsScores)
