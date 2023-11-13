@@ -87,7 +87,6 @@ func (r *NacosConnConfig) GetPort() uint64 {
 }
 
 func (n *NacosConnConfig) ServiceConfigListen() error {
-
 	nacosClient, err := n.getNacosClient()
 	if err != nil {
 		return err
@@ -129,17 +128,17 @@ func (n *NacosConnConfig) getNacosClient() (config_client.IConfigClient, error) 
 	return nacosClient, nil
 }
 
-func (n *NacosConnConfig) getNacosConfig(nacosClient config_client.IConfigClient) (string, error) {
-	//TODO: VERIFY CONFIG JSON
-	content, err := nacosClient.GetConfig(vo.ConfigParam{
-		DataId: n.GetDataId(),
-		Group:  n.GetGroupId(),
-	})
-	if err != nil {
-		return "", err
-	}
-	return content, nil
-}
+// func (n *NacosConnConfig) getNacosConfig(nacosClient config_client.IConfigClient) (string, error) {
+// 	//TODO: VERIFY CONFIG JSON
+// 	content, err := nacosClient.GetConfig(vo.ConfigParam{
+// 		DataId: n.GetDataId(),
+// 		Group:  n.GetGroupId(),
+// 	})
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	return content, nil
+// }
 
 func (n *NacosConnConfig) listenNacosConfig(nacosClient config_client.IConfigClient) error {
 	err := nacosClient.ListenConfig(vo.ConfigParam{
@@ -150,7 +149,6 @@ func (n *NacosConnConfig) listenNacosConfig(nacosClient config_client.IConfigCli
 			n.serviceConfigUpdate(dataId, content)
 		},
 	})
-
 	if err != nil {
 		return err
 	}

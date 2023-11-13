@@ -9,10 +9,10 @@ import (
 )
 
 type nacosContent struct {
-	author  string  `validate:"required"`
-	update  string  `validate:"required"`
-	version string  `validate:"required"`
-	config  Config_ `validate:"required"`
+	// author  string  `validate:"required"`
+	// update  string  `validate:"required"`
+	// version string  `validate:"required"`
+	config Config_ `validate:"required"`
 }
 
 type Config_ struct {
