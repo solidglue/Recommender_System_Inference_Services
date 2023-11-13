@@ -5,8 +5,6 @@ import (
 	"errors"
 	"infer-microservices/utils/logs"
 	"net/http"
-	"reflect"
-	"strconv"
 	"strings"
 
 	"infer-microservices/apis/io"
@@ -110,29 +108,6 @@ func (s *HttpServer) httpRequstParse(r *http.Request) (io.RecRequest, error) {
 	if err != nil {
 		return request, err
 	}
-
-	//INFO:the recallNum param from http request,maybe int/ float /string。 user reflect to convert to int32.
-	recallNum := int32(100)
-	recallNumType := reflect.TypeOf(requestMap["recallNum"])
-	recallNumTypeKind := recallNumType.Kind()
-	switch recallNumTypeKind {
-	case reflect.String:
-		recallNumStr, ok := requestMap["recallNum"].(string)
-		if ok {
-			recallNum64, err := strconv.ParseInt(recallNumStr, 10, 64)
-			if err != nil {
-				logs.Error(err)
-			} else {
-				recallNum = int32(recallNum64)
-			}
-		}
-	case reflect.Float32, reflect.Float64, reflect.Int16, reflect.Int, reflect.Int64, reflect.Int8,
-		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		recallNum, _ = requestMap["recallNum"].(int32)
-	default:
-		logs.Info("unkown type, set recallnum to 100")
-	}
-	request.SetRecallNum(recallNum)
 
 	return request, nil
 }
