@@ -24,21 +24,21 @@ The model inference microservices based on deep learning mainly uses the followi
 The core components of model inference microservices are as follows：
 | Type | Component | Description |
 | --- | --- | --- |
-| Sample | [Recall Samples](https://github.com/solidglue/RecommenderSystems-Inference-Microservices/tree/master/cores/model/dssm) | Search recall TFRcords format samples from redis cluster, such as dssm model. |
-|| [Rank Samples](https://github.com/solidglue/RecommenderSystems-Inference-Microservices/tree/master/cores/model/deepfm) |  Search recall TFRcords format samples from redis cluster, such as deepfm model. |
-| Recall | [Get embedding vector](https://github.com/solidglue/RecommenderSystems-Inference-Microservices/tree/master/cores/model/dssm) | Search user's/item's embedding vector from recall model which deployed by tfservig(grpc sevice) , input data is recall samples. |
-|  | [Search index](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/cores/faiss) | Quick search thousands items from faiss index (millions items) service(grpc sevice) . |
-| Rank | [Rank](https://github.com/solidglue/RecommenderSystems-Inference-Microservices/tree/master/cores/model/deepfm)  | Rank input items by rank model  which deployed by tfservig(grpc sevice) . |
-| Service | [Config Loader](https://github.com/solidglue/RecommenderSystems-Inference-Microservices/tree/master/cores/service_config_loader) | Sparse service's start config from Naocs, such as grpc info 、 redis info and index info. |
-|  | [Register Services](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/blob/master/apis/dubbo/server/dubbo_server_runner.go) | Register services to Nacos. |
-|  | [Update Services](https://github.com/solidglue/RecommenderSystems-Inference-Microservices/tree/master/cores/nacos_config_listener) | Update services when nacos config files have changed, such as grpc info 、 redis info or index info. |
-|API| [Dubbo](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/apis/dubbo) |Provide Dubbo protocol APIs. |
-|| [gRPC](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/apis/grpc) |Provide gRPC protocol APIs. |
-|| [REST](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/apis/rest) |Provide Http protocol APIs. |
+| Sample | [Recall Samples](https://github.com/solidglue/RecommenderSystems-Inference-Microservices/tree/master/pkg/model/dssm) | Search recall TFRcords format samples from redis cluster, such as dssm model. |
+|| [Rank Samples](https://github.com/solidglue/RecommenderSystems-Inference-Microservices/tree/master/pkg/model/deepfm) |  Search recall TFRcords format samples from redis cluster, such as deepfm model. |
+| Recall | [Get embedding vector](https://github.com/solidglue/RecommenderSystems-Inference-Microservices/tree/master/pkg/model/dssm) | Search user's/item's embedding vector from recall model which deployed by tfservig(grpc sevice) , input data is recall samples. |
+|  | [Search index](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/pkg/faiss) | Quick search thousands items from faiss index (millions items) service(grpc sevice) . |
+| Rank | [Rank](https://github.com/solidglue/RecommenderSystems-Inference-Microservices/tree/master/pkg/model/deepfm)  | Rank input items by rank model  which deployed by tfservig(grpc sevice) . |
+| Service | [Config Loader](https://github.com/solidglue/RecommenderSystems-Inference-Microservices/tree/master/pkg/config_loader) | Sparse service's start config from Naocs, such as grpc info 、 redis info and index info. |
+|  | [Register Services](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/blob/master/api/dubbo_api/server/dubbo_api_servier.go) | Register services to Nacos. |
+|  | [Update Services](https://github.com/solidglue/RecommenderSystems-Inference-Microservices/tree/master/pkg/nacos) | Update services when nacos config files have changed, such as grpc info 、 redis info or index info. |
+|API| [Dubbo](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/api/dubbo_api) |Provide Dubbo protocol APIs. |
+|| [gRPC](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/api/grpc_api) |Provide gRPC protocol APIs. |
+|| [REST](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/api/rest_api) |Provide Http protocol APIs. |
 |Web| [Web](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/web) |Services manage and Service monitor page. |
-|Deploy| [Faiss](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/deploy/faiss) |Faiss index service deploy. |
-|| [TFServing](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/deploy/tfserving) |Tensorflow model deploy. |
-|| [Infer](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/deploy/infer) |Recommend System infer deploy. |
+|Deploy| [Faiss](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/scripts/deployments/faiss) |Faiss index service deploy. |
+|| [TFServing](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/scripts/deployments/tfserving) |Tensorflow model deploy. |
+|| [Infer](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/scripts/deployments/infer) |Recommend System infer deploy. |
 
 
 

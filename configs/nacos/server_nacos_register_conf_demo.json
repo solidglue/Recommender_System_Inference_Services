@@ -1,0 +1,59 @@
+{
+	"dataId": "dataid-001",
+	"group": "infer",
+	"namespace": "",
+	"content": {  "_comment":" // from local only include content. whole info from nacos",
+		"author": "loki",
+		"update": "",
+		"version": "v1.0",
+		"desc": "",
+		"config": {
+			"model_conf": {
+				"model-001": {
+					"fieldsSpec": [{},{},{}],
+					"tfservingGrpcAddr": {
+					    "tfservingModelName": "models",
+					    "addrs": [],
+						"pool_size": 50,
+						"initCap":10,
+						"idleTimeoutMs": 100,
+						"readTimeoutMs": 100,
+						"writeTimeoutMs":100,
+						"dialTimeoutS":600
+				    },
+				    "user_feature_rediskey_pre": "",
+				    "item_feature_rediskey_pre": ""
+				}
+			},
+			"index_conf": {
+				"faissGrpcAddr": {
+					"addrs": [],
+					"pool_size": 50,
+					"initCap":10,
+					"idleTimeoutMs": 100,
+					"readTimeoutMs": 100,
+					"writeTimeoutMs":100,
+					"dialTimeoutS":600
+				},
+				"indexInfo":{
+					"index-001": {
+						"recallNum": 100,
+						"indexName": "index-001"
+					}
+				}
+			},
+			"redis_conf": {		
+				"redisCluster": {
+					"addrs": [],
+					"password": "",
+					"idleTimeoutMs": 100,
+					"readTimeoutMs": 100,
+					"writeTimeoutMs":100,
+					"dialTimeoutS":600,
+					"maxRetries":2,
+					"minIdleConns":50
+				}
+			}
+		}
+	}
+}

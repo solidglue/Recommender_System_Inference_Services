@@ -1,0 +1,28 @@
+
+
+dubbo:
+  application:
+    name: infer # metadata: application=myApp; name=myApp
+    module: dubbogo #metadata: module=opensource
+    group: infer-001 # no metadata record
+    organization: dubbo # metadata: organization=dubbo
+    owner:  # metadata: owner=laurence
+    version: 1.0.0 # metadata: app.version=myversion
+  registries:
+    inferENG:
+      protocol: nacos
+      address: 10.10.10.10:8822
+      group: DEFAULT_GROUP # nacos group, default is DEFAULT_GROUP
+      registry-type: interface
+  protocols:
+    dubbo:
+      name: dubbo # 
+      port: 10000 #      
+  provider:
+    register: true
+    registryIDS:
+      - inferENG
+    services:
+      DubbogoInferService:
+        protocol: dubbo
+        interface: com.loki.www.infer.DubbogoInferService
