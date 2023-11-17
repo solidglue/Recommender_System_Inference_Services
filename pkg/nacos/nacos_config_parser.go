@@ -1,4 +1,4 @@
-package nacos_config_listener
+package nacos
 
 import (
 	"encoding/json"

@@ -25,9 +25,7 @@ func init() {
 	//INFO: both input and output need to register.
 	hessian.RegisterPOJO(&io.RecRequest{})
 	hessian.RegisterPOJO(&io.RecResponse{})
-
 	config.SetConsumerService(DubboServiceApiClient)
-
 }
 
 func (s *DubboServiceApi) SetDubboConfFile(dubboConfFile string) {

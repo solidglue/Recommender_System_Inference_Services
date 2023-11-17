@@ -80,7 +80,7 @@ func (r *RecRequest) GetItemList() []string {
 }
 
 func (r *RecRequest) JavaClassName() string {
-	return "com.xxx.www.infer.RecRequest"
+	return "com.loki.www.infer.RecRequest"
 }
 
 func (r *RecRequest) Check() bool {

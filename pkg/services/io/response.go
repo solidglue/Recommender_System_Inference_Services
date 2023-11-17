@@ -34,5 +34,5 @@ func (r *RecResponse) GetData() []string {
 }
 
 func (rsp *RecResponse) JavaClassName() string {
-	return "com.xxx.www.infer.RecResponse"
+	return "com.loki.www.infer.RecResponse"
 }
