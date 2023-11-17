@@ -10,7 +10,6 @@ import (
 	framework "infer-microservices/internal/tensorflow_gogofaster/core/framework"
 	tfserving "infer-microservices/internal/tfserving_gogofaster"
 	config_loader "infer-microservices/pkg/config_loader"
-	"infer-microservices/pkg/logs"
 	"infer-microservices/pkg/utils"
 	"sync"
 	"time"
@@ -27,7 +26,6 @@ var baseModelInstance *BaseModel
 
 type BaseModel struct {
 	modelName       string
-	userId          string
 	serviceConfig   *config_loader.ServiceConfig
 	userBloomFilter *bloom.BloomFilter
 	itemBloomFilter *bloom.BloomFilter
@@ -57,15 +55,6 @@ func (b *BaseModel) SetModelName(modelName string) {
 
 func (b *BaseModel) GetModelName() string {
 	return b.modelName
-}
-
-// userid
-func (b *BaseModel) SetUserId(userId string) {
-	b.userId = userId
-}
-
-func (b *BaseModel) GetUserId() string {
-	return b.userId
 }
 
 // serviceConfig *service_config.ServiceConfig
@@ -106,17 +95,17 @@ func (b *BaseModel) notify(sub Subject) {
 }
 
 // get user tfrecords offline samples
-func (b *BaseModel) GetUserExampleFeatures() (*internal.SeqExampleBuff, error) {
+func (b *BaseModel) GetUserExampleFeatures(userId string) (*internal.SeqExampleBuff, error) {
 	//INFO: use bloom filter check users, avoid all users search redis.
 
 	userSeqExampleBuff := internal.SeqExampleBuff{}
 	userExampleFeatsBuff := make([]byte, 0)
 
-	redisKey := b.serviceConfig.GetModelConfig().GetUserRedisKeyPre() + b.userId
-	if b.userBloomFilter.Test([]byte(b.userId)) {
+	redisKey := b.serviceConfig.GetModelConfig().GetUserRedisKeyPre() + userId
+	if b.userBloomFilter.Test([]byte(userId)) {
 		userExampleFeats, err := b.serviceConfig.GetRedisConfig().GetRedisPool().Get(redisKey)
 		if err != nil {
-			logs.Error("get item features err", err)
+			//logs.Error("get item features err", err)
 			return &userSeqExampleBuff, err
 		} else {
 			userExampleFeatsBuff = []byte(userExampleFeats) //.(string)
@@ -125,7 +114,7 @@ func (b *BaseModel) GetUserExampleFeatures() (*internal.SeqExampleBuff, error) {
 
 	//protrait features & realtime features.
 	userSeqExampleBuff = internal.SeqExampleBuff{
-		Key:  &b.userId,
+		Key:  &userId,
 		Buff: &userExampleFeatsBuff,
 	}
 
@@ -133,7 +122,7 @@ func (b *BaseModel) GetUserExampleFeatures() (*internal.SeqExampleBuff, error) {
 }
 
 // get user tfrecords online samples
-func (b *BaseModel) GetUserContextExampleFeatures() (*internal.SeqExampleBuff, error) {
+func (b *BaseModel) GetUserContextExampleFeatures(userId string) (*internal.SeqExampleBuff, error) {
 	//TODO: use bloom filter check users, avoid all users search redis.
 	userContextSeqExampleBuff := internal.SeqExampleBuff{}
 	userContextExampleFeatsBuff := make([]byte, 0)
@@ -141,7 +130,7 @@ func (b *BaseModel) GetUserContextExampleFeatures() (*internal.SeqExampleBuff, e
 	//TODO: update context features. only from requst. such as location , time
 	//context features.
 	userContextSeqExampleBuff = internal.SeqExampleBuff{
-		Key:  &b.userId,
+		Key:  &userId,
 		Buff: &userContextExampleFeatsBuff,
 	}
 

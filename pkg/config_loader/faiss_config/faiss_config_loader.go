@@ -68,7 +68,7 @@ func (f *FaissIndexConfig) ConfigLoad(dataId string, indexConfStr string) error 
 			if ok {
 				recallNum64, err := strconv.ParseInt(recallNumStr, 10, 64)
 				if err != nil {
-					logs.Error(err)
+					logs.Warn(err)
 				} else {
 					recallNum = int32(recallNum64)
 				}
@@ -77,7 +77,7 @@ func (f *FaissIndexConfig) ConfigLoad(dataId string, indexConfStr string) error 
 			reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 			recallNum, _ = tmpIndexConfMap["recallNum"].(int32)
 		default:
-			logs.Info("unkown type, set recallnum to 100")
+			logs.Warn("unkown type, set recallnum to 100")
 		}
 
 		indexName_ := tmpIndexConfMap["index_name"].(string)

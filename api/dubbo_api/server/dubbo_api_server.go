@@ -2,8 +2,10 @@ package server
 
 import (
 	"context"
+	"infer-microservices/pkg/logs"
 	dubbo_service "infer-microservices/pkg/services/dubbo_service"
 	"infer-microservices/pkg/services/io"
+	"time"
 
 	"dubbo.apache.org/dubbo-go/v3/config"
 	hessian "github.com/apache/dubbo-go-hessian2"
@@ -39,6 +41,7 @@ func (s *DubboServiceApi) SetDubboService(dubboService *dubbo_service.DubboServi
 // @implement start infertace
 func (s *DubboServiceApi) ServiceStart() {
 	config.SetProviderService(s)
+	logs.Debug(time.Now(), "DubboServiceApi", s)
 	if err := config.Load(config.WithPath(s.dubboConfFile)); err != nil {
 		panic(err)
 	}

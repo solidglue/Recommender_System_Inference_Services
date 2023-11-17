@@ -5,6 +5,7 @@ import (
 	service_config_loader "infer-microservices/pkg/config_loader"
 	"infer-microservices/pkg/logs"
 	"sync"
+	"time"
 
 	"github.com/nacos-group/nacos-sdk-go/clients"
 	"github.com/nacos-group/nacos-sdk-go/clients/config_client"
@@ -91,7 +92,7 @@ func (n *NacosConnConfig) StartListenNacos() {
 	if !ok {
 		err := n.serviceConfigListen()
 		if err != nil {
-			logs.Error(err)
+			logs.Fatal(n.dataId, time.Now(), err)
 			panic(err)
 		} else {
 			NacosListedMap[n.dataId] = true
@@ -134,7 +135,6 @@ func (n *NacosConnConfig) getNacosClient() (config_client.IConfigClient, error) 
 		"clientConfig":  clientConf,
 	})
 	if err != nil {
-		logs.Error(err)
 		return nil, err
 	}
 
@@ -159,6 +159,7 @@ func (n *NacosConnConfig) listenNacosConfig(nacosClient config_client.IConfigCli
 		Group:  n.GetGroupId(),
 		OnChange: func(namespace, group, dataId, data string) {
 			content := string(data)
+			logs.Debug(n.GetDataId(), time.Now(), "nacos content:", content)
 			n.serviceConfigUpdate(dataId, content)
 		},
 	})
@@ -188,7 +189,7 @@ func (n *NacosConnConfig) serviceConfigUpdate(dataId string, content string) err
 		//rank
 		serviceConf = director.ServiceConfigUpdaterNotContainIndexDirector(dataId, redisConfStr, modelConfStr)
 	}
-
+	logs.Info(dataId, "updated", time.Now(), serviceConf)
 	service_config_loader.ServiceConfigs[dataId] = &serviceConf
 
 	return nil

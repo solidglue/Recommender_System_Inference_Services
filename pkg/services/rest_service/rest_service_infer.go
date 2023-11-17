@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"infer-microservices/pkg/logs"
+	"infer-microservices/pkg/utils"
 	"net/http"
 	"strings"
 
@@ -103,39 +104,42 @@ func (s *HttpService) RecommenderInfer(w http.ResponseWriter, r *http.Request) {
 	rsp := make(map[string]interface{}, 0)
 	rsp["code"] = 200
 
+	//INFO: convert http string data to struct data.
+	request, err := s.convertHttpRequstToRecRequest(r)
+	requestId := utils.CreateRequestId(&request)
+
+	if err != nil {
+		logs.Error(requestId, time.Now(), err)
+		panic(err)
+	}
+
 	//check http input
-	checkStatus := s.Check()
+	checkStatus := s.Check(requestId)
 	if !checkStatus {
 		err := errors.New("http input check failed")
 		logs.Error(err)
 		panic(err)
 	}
-
-	//INFO: convert http string data to struct data.
-	request, err := s.convertHttpRequstToRecRequest(r)
-	if err != nil {
-		logs.Error(err)
-		panic(err)
-	}
-
 	//check input
 	checkStatus = request.Check()
 	if !checkStatus {
 		err := errors.New("input check failed")
-		logs.Error(err)
+		logs.Error(requestId, time.Now(), err)
 		panic(err)
 	}
 
 	//nacos listen
 	nacosFactory := nacos.NacosFactory{}
 	nacosConfig := nacosFactory.CreateNacosConfig(s.nacosIp, uint64(s.nacosPort), &request)
+	logs.Debug(requestId, time.Now(), "nacosConfig:", nacosConfig)
+
 	nacosConfig.StartListenNacos()
 
 	//infer
 	ServiceConfig := config_loader.ServiceConfigs[request.GetDataId()]
 	response, err := s.recommenderInferHystrix("restServer", r, &request, ServiceConfig)
 	if err != nil {
-		logs.Error(err)
+		logs.Error(requestId, time.Now(), err)
 		panic(err)
 	} else {
 		rsp["data"] = response
@@ -145,22 +149,22 @@ func (s *HttpService) RecommenderInfer(w http.ResponseWriter, r *http.Request) {
 	w.Write(buff)
 }
 
-func (s *HttpService) Check() bool {
+func (s *HttpService) Check(requestId string) bool {
 	err := s.request.ParseForm()
 	if err != nil {
-		logs.Error(err)
+		logs.Error(requestId, time.Now(), err)
 		return false
 	}
 
 	method := s.request.Method
 	if method != "POST" {
-		logs.Error(err)
+		logs.Error(requestId, time.Now(), err)
 		return false
 	}
 
 	data := s.request.Form["data"]
 	if len(data) == 0 {
-		logs.Error(err)
+		logs.Error(requestId, time.Now(), err)
 		return false
 	}
 
@@ -181,15 +185,17 @@ func (s *HttpService) convertHttpRequstToRecRequest(r *http.Request) (io.RecRequ
 
 func (s *HttpService) recommenderInferHystrix(serverName string, r *http.Request, in *io.RecRequest, ServiceConfig *config_loader.ServiceConfig) (map[string]interface{}, error) {
 	response := make(map[string]interface{}, 0)
+	requestId := utils.CreateRequestId(in)
+
 	hystrixErr := hystrix.Do(serverName, func() error {
 		// request recall / rank func.
 		response_, err := s.modelInfer(r, in, ServiceConfig)
 		if err != nil {
-			logs.Error(err)
+			logs.Error(requestId, time.Now(), err)
 		} else {
 			response = response_
 		}
-		return nil
+		return err
 	}, func(err error) error {
 		//INFO: do this when services are timeout (hystrix timeout).
 		// less items and simple model.
@@ -199,12 +205,12 @@ func (s *HttpService) recommenderInferHystrix(serverName string, r *http.Request
 		in.SetItemList(itemList[:s.lowerRankNum])
 		response_, err_ := s.modelInferReduce(r, in, ServiceConfig)
 		if err_ != nil {
-			logs.Error(err_)
+			logs.Error(requestId, time.Now(), err_)
 			return err_
 		} else {
 			response = response_
 		}
-		return nil
+		return err
 	})
 
 	if hystrixErr != nil {
@@ -216,6 +222,7 @@ func (s *HttpService) recommenderInferHystrix(serverName string, r *http.Request
 
 func (s *HttpService) modelInfer(r *http.Request, in *io.RecRequest, ServiceConfig *config_loader.ServiceConfig) (map[string]interface{}, error) {
 	response := make(map[string]interface{}, 0)
+	requestId := utils.CreateRequestId(in)
 
 	//build model by model_factory
 	modelName := in.GetModelType()
@@ -223,20 +230,27 @@ func (s *HttpService) modelInfer(r *http.Request, in *io.RecRequest, ServiceConf
 		modelName = strings.ToLower(modelName)
 	}
 
-	//strategy pattern
-	modelfactory := model.ModelStrategyFactory{}
+	//strategy pattern. share model
+	var modelStrategy model.ModelStrategyInterface
 	modelStrategyContext := model.ModelStrategyContext{}
-	modelStrategy := modelfactory.CreateModelStrategy(modelName, in, ServiceConfig)
+	_, ok := model.ShareModelsMap[in.GetDataId()]
+	if !ok {
+		modelfactory := model.ModelStrategyFactory{}
+		modelStrategy = modelfactory.CreateModelStrategy(modelName, ServiceConfig)
+		model.ShareModelsMap[in.GetDataId()] = modelStrategy
+	} else {
+		modelStrategy = model.ShareModelsMap[in.GetDataId()]
+	}
 	modelStrategyContext.SetModelStrategy(modelStrategy)
 
 	var err error
 	if s.skywalkingWeatherOpen {
-		response, err = modelStrategyContext.ModelInferSkywalking(r)
+		response, err = modelStrategyContext.ModelInferSkywalking(requestId, in.GetDataId(), in.GetItemList(), r)
 	} else {
-		response, err = modelStrategyContext.ModelInferNoSkywalking(r)
+		response, err = modelStrategyContext.ModelInferNoSkywalking(requestId, in.GetDataId(), in.GetItemList(), r)
 	}
 	if err != nil {
-		logs.Error(err)
+		logs.Error(requestId, time.Now(), err)
 		return response, err
 	}
 
@@ -245,6 +259,7 @@ func (s *HttpService) modelInfer(r *http.Request, in *io.RecRequest, ServiceConf
 
 func (s *HttpService) modelInferReduce(r *http.Request, in *io.RecRequest, ServiceConfig *config_loader.ServiceConfig) (map[string]interface{}, error) {
 	response := make(map[string]interface{}, 0)
+	requestId := utils.CreateRequestId(in)
 
 	//build model by model_factory
 	// modelName := in.GetModelType()
@@ -254,20 +269,27 @@ func (s *HttpService) modelInferReduce(r *http.Request, in *io.RecRequest, Servi
 
 	modelName := "fm" //fm model use to reduce
 
-	//strategy pattern
-	modelfactory := model.ModelStrategyFactory{}
-	modelStrategy := modelfactory.CreateModelStrategy(modelName, in, ServiceConfig)
+	//strategy pattern. share model
+	var modelStrategy model.ModelStrategyInterface
 	modelStrategyContext := model.ModelStrategyContext{}
+	_, ok := model.ShareModelsMap[in.GetDataId()]
+	if !ok {
+		modelfactory := model.ModelStrategyFactory{}
+		modelStrategy = modelfactory.CreateModelStrategy(modelName, ServiceConfig)
+		model.ShareModelsMap[in.GetDataId()] = modelStrategy
+	} else {
+		modelStrategy = model.ShareModelsMap[in.GetDataId()]
+	}
 	modelStrategyContext.SetModelStrategy(modelStrategy)
 
 	var err error
 	if s.skywalkingWeatherOpen {
-		response, err = modelStrategyContext.ModelInferSkywalking(r)
+		response, err = modelStrategyContext.ModelInferSkywalking(requestId, in.GetDataId(), in.GetItemList(), r)
 	} else {
-		response, err = modelStrategyContext.ModelInferNoSkywalking(r)
+		response, err = modelStrategyContext.ModelInferNoSkywalking(requestId, in.GetDataId(), in.GetItemList(), r)
 	}
 	if err != nil {
-		logs.Error(err)
+		logs.Error(requestId, time.Now(), err)
 		return response, err
 	}
 

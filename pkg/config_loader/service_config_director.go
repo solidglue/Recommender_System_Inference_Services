@@ -2,6 +2,7 @@ package service_config_loader
 
 import (
 	"infer-microservices/pkg/logs"
+	"time"
 
 	validator "github.com/go-playground/validator/v10"
 )
@@ -26,7 +27,7 @@ func (s *ServiceConfigDirector) ServiceConfigUpdateContainIndexDirector(dataId s
 	validate := validator.New()
 	err := validate.Struct(serviceConfig)
 	if err != nil {
-		logs.Error(err)
+		logs.Error(dataId, time.Now(), err)
 		return ServiceConfig{}
 	}
 
@@ -44,7 +45,7 @@ func (s *ServiceConfigDirector) ServiceConfigUpdaterNotContainIndexDirector(data
 	validate := validator.New()
 	err := validate.Struct(serviceConfig)
 	if err != nil {
-		logs.Error(err)
+		logs.Error(dataId, time.Now(), err)
 		return ServiceConfig{}
 	}
 

@@ -6,17 +6,17 @@ import (
 	"infer-microservices/pkg/model/basemodel"
 	"infer-microservices/pkg/model/deepfm"
 	"infer-microservices/pkg/model/dssm"
-	"infer-microservices/pkg/services/io"
 	"net/http"
 )
 
 var baseModel *basemodel.BaseModel
 var modelStrategyMap map[string]ModelStrategyInterface
+var ShareModelsMap map[string]ModelStrategyInterface
 
 type ModelStrategyInterface interface {
 	//model infer.
-	ModelInferSkywalking(r *http.Request) (map[string]interface{}, error)
-	ModelInferNoSkywalking(r *http.Request) (map[string]interface{}, error)
+	ModelInferSkywalking(requestId string, userId string, itemList []string, r *http.Request) (map[string]interface{}, error)
+	ModelInferNoSkywalking(requestId string, userId string, itemList []string, r *http.Request) (map[string]interface{}, error)
 }
 
 type ModelStrategyFactory struct {
@@ -26,11 +26,10 @@ func init() {
 	modelStrategyMap = make(map[string]ModelStrategyInterface, 0)
 }
 
-func (m *ModelStrategyFactory) CreateModelStrategy(modelName string, in *io.RecRequest, serverConn *config_loader.ServiceConfig) ModelStrategyInterface {
+func (m *ModelStrategyFactory) CreateModelStrategy(modelName string, serverConn *config_loader.ServiceConfig) ModelStrategyInterface {
 	baseModel = basemodel.GetBaseModelInstance()
 	baseModel.SetUserBloomFilter(internal.GetUserBloomFilterInstance())
 	baseModel.SetItemBloomFilter(internal.GetItemBloomFilterInstance())
-	baseModel.SetUserId(in.GetUserId())
 	baseModel.SetServiceConfig(serverConn)
 
 	//dssm model
@@ -43,7 +42,7 @@ func (m *ModelStrategyFactory) CreateModelStrategy(modelName string, in *io.RecR
 	deepfmModel := &deepfm.DeepFM{
 		BaseModel: *baseModel,
 	}
-	deepfmModel.SetItemList(in.GetItemList())
+
 	modelStrategyMap["deepfm"] = deepfmModel
 
 	// modelStrategyMap["lr"] = lrModel

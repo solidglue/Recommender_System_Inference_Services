@@ -5,6 +5,7 @@ import (
 	"fmt"
 	config_loader "infer-microservices/pkg/config_loader"
 	"infer-microservices/pkg/model"
+	"infer-microservices/pkg/utils"
 	"strings"
 	"sync"
 	"time"
@@ -28,7 +29,6 @@ type GrpcService struct {
 }
 
 // set func
-
 func (s *GrpcService) SetNacosIp(nacosIp string) {
 	s.nacosIp = nacosIp
 }
@@ -55,6 +55,9 @@ func (g *GrpcService) RecommenderInfer(ctx context.Context, in *RecommendRequest
 	response := &RecommendResponse{
 		Code: 404,
 	}
+	request := convertGrpcRequestToRecRequest(in)
+	requestId := utils.CreateRequestId(&request)
+	logs.Debug(requestId, time.Now(), "RecRequest:", requestId)
 
 	ctx, cancelFunc := context.WithTimeout(ctx, time.Millisecond*150)
 	defer cancelFunc()
@@ -66,12 +69,16 @@ func (g *GrpcService) RecommenderInfer(ctx context.Context, in *RecommendRequest
 		case <-ctx.Done():
 			switch ctx.Err() {
 			case context.DeadlineExceeded:
+				logs.Warn(requestId, time.Now(), "context timeout DeadlineExceeded.")
 				return response, ctx.Err()
 			case context.Canceled:
+				logs.Warn(requestId, time.Now(), "context timeout Canceled.")
 				return response, ctx.Err()
 			}
 		case responseCh := <-respCh:
 			response = responseCh
+			logs.Info(requestId, time.Now(), "response:", response)
+
 			return response, nil
 		}
 	}
@@ -80,7 +87,7 @@ func (g *GrpcService) RecommenderInfer(ctx context.Context, in *RecommendRequest
 func (s *GrpcService) recommenderInferContext(ctx context.Context, in *RecommendRequest, respCh chan *RecommendResponse) {
 	defer func() {
 		if info := recover(); info != nil {
-			fmt.Println("panic", info)
+			logs.Fatal("panic", info)
 		} //else {
 		//fmt.Println("")
 		//}
@@ -89,19 +96,22 @@ func (s *GrpcService) recommenderInferContext(ctx context.Context, in *Recommend
 	response := &RecommendResponse{
 		Code: 404,
 	}
-
 	request := convertGrpcRequestToRecRequest(in)
+	requestId := utils.CreateRequestId(&request)
+
 	//check input
 	checkStatus := request.Check()
 	if !checkStatus {
 		err := errors.New("input check failed")
-		logs.Error(err)
+		logs.Error(requestId, time.Now(), err)
 		panic(err)
 	}
 
 	//nacos listen
 	nacosFactory := nacos.NacosFactory{}
 	nacosConfig := nacosFactory.CreateNacosConfig(s.nacosIp, uint64(s.nacosPort), &request)
+	logs.Debug(requestId, time.Now(), "nacosConfig:", nacosConfig)
+
 	nacosConfig.StartListenNacos()
 
 	//infer
@@ -132,18 +142,19 @@ func (s *GrpcService) recommenderInferHystrix(serverName string, in *io.RecReque
 	response := &RecommendResponse{
 		Code: 404,
 	}
+	requestId := utils.CreateRequestId(in)
 
 	hystrixErr := hystrix.Do(serverName, func() error {
 		// request recall / rank func.
 		response_, err := s.modelInfer(in, ServiceConfig)
 		if err != nil {
-			logs.Error(err)
+			logs.Error(requestId, time.Now(), err)
 			return err
 		} else {
 			response = response_
 		}
 
-		return nil
+		return err
 	}, func(err error) error {
 		//INFO: do this when services are timeout (hystrix timeout).
 		// less items and simple model.
@@ -153,13 +164,13 @@ func (s *GrpcService) recommenderInferHystrix(serverName string, in *io.RecReque
 		response_, err_ := s.modelInferReduce(in, ServiceConfig)
 
 		if err_ != nil {
-			logs.Error(err_)
+			logs.Error(requestId, time.Now(), err_)
 			return err_
 		} else {
 			response = response_
 		}
 
-		return nil
+		return err
 	})
 
 	if hystrixErr != nil {
@@ -173,6 +184,7 @@ func (s *GrpcService) modelInfer(in *io.RecRequest, ServiceConfig *config_loader
 	response := &RecommendResponse{
 		Code: 404,
 	}
+	requestId := utils.CreateRequestId(in)
 
 	//build model by model_factory
 	modelName := in.GetModelType()
@@ -180,22 +192,29 @@ func (s *GrpcService) modelInfer(in *io.RecRequest, ServiceConfig *config_loader
 		modelName = strings.ToLower(modelName)
 	}
 
-	//strategy pattern
-	modelfactory := model.ModelStrategyFactory{}
-	modelStrategy := modelfactory.CreateModelStrategy(modelName, in, ServiceConfig)
+	//strategy pattern. share model
+	var modelStrategy model.ModelStrategyInterface
 	modelStrategyContext := model.ModelStrategyContext{}
+	_, ok := model.ShareModelsMap[in.GetDataId()]
+	if !ok {
+		modelfactory := model.ModelStrategyFactory{}
+		modelStrategy = modelfactory.CreateModelStrategy(modelName, ServiceConfig)
+		model.ShareModelsMap[in.GetDataId()] = modelStrategy
+	} else {
+		modelStrategy = model.ShareModelsMap[in.GetDataId()]
+	}
 	modelStrategyContext.SetModelStrategy(modelStrategy)
 
 	var err error
 	var responseTf map[string]interface{}
 
 	if s.skywalkingWeatherOpen {
-		responseTf, err = modelStrategyContext.ModelInferSkywalking(nil)
+		responseTf, err = modelStrategyContext.ModelInferSkywalking(requestId, in.GetDataId(), in.GetItemList(), nil)
 	} else {
-		responseTf, err = modelStrategyContext.ModelInferNoSkywalking(nil)
+		responseTf, err = modelStrategyContext.ModelInferNoSkywalking(requestId, in.GetDataId(), in.GetItemList(), nil)
 	}
 	if err != nil {
-		logs.Error(err)
+		logs.Error(requestId, time.Now(), err)
 		return response, err
 	}
 
@@ -228,6 +247,7 @@ func (s *GrpcService) modelInferReduce(in *io.RecRequest, ServiceConfig *config_
 	response := &RecommendResponse{
 		Code: 404,
 	}
+	requestId := utils.CreateRequestId(in)
 
 	//build model by model_factory
 	// modelName := in.GetModelType()
@@ -237,15 +257,22 @@ func (s *GrpcService) modelInferReduce(in *io.RecRequest, ServiceConfig *config_
 
 	modelName := "fm"
 
-	//strategy pattern
-	modelfactory := model.ModelStrategyFactory{}
-	modelStrategy := modelfactory.CreateModelStrategy(modelName, in, ServiceConfig)
+	//strategy pattern. share model
+	var modelStrategy model.ModelStrategyInterface
 	modelStrategyContext := model.ModelStrategyContext{}
+	_, ok := model.ShareModelsMap[in.GetDataId()]
+	if !ok {
+		modelfactory := model.ModelStrategyFactory{}
+		modelStrategy = modelfactory.CreateModelStrategy(modelName, ServiceConfig)
+		model.ShareModelsMap[in.GetDataId()] = modelStrategy
+	} else {
+		modelStrategy = model.ShareModelsMap[in.GetDataId()]
+	}
 	modelStrategyContext.SetModelStrategy(modelStrategy)
 
-	responseTf, err := modelStrategyContext.ModelInferSkywalking(nil)
+	responseTf, err := modelStrategyContext.ModelInferSkywalking(requestId, in.GetDataId(), in.GetItemList(), nil)
 	if err != nil {
-		logs.Error(err)
+		logs.Error(requestId, time.Now(), err)
 		return response, err
 	}
 

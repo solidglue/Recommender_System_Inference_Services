@@ -18,7 +18,6 @@ import (
 	"github.com/afex/hystrix-go/hystrix"
 )
 
-// var inferModel model.ModelInferInterface
 var recallWg sync.WaitGroup
 
 type DubboService struct {
@@ -36,8 +35,7 @@ type DubboService struct {
 // 	}
 // }
 
-//set func
-
+// set func
 func (s *DubboService) SetNacosIp(nacosIp string) {
 	s.nacosIp = nacosIp
 }
@@ -58,12 +56,14 @@ func (s *DubboService) SetLowerRecallNum(lowerRecallNum int) {
 func (s *DubboService) RecommenderInfer(ctx context.Context, in *io.RecRequest) (*io.RecResponse, error) {
 	response := &io.RecResponse{}
 	response.SetCode(404)
+	requestId := utils.CreateRequestId(in)
+	logs.Debug(requestId, time.Now(), "RecRequest:", in)
 
 	//check input
 	checkStatus := in.Check()
 	if !checkStatus {
 		err := errors.New("input check failed")
-		logs.Error(err)
+		logs.Error(requestId, time.Now(), err)
 		return response, err
 	}
 
@@ -79,14 +79,16 @@ func (s *DubboService) RecommenderInfer(ctx context.Context, in *io.RecRequest) 
 		case <-ctx.Done():
 			switch ctx.Err() {
 			case context.DeadlineExceeded:
-				logs.Info("context timeout DeadlineExceeded.")
+				logs.Warn(requestId, time.Now(), "context timeout DeadlineExceeded.")
 				return response, ctx.Err()
 			case context.Canceled:
-				logs.Info("context timeout Canceled.")
+				logs.Warn(requestId, time.Now(), "context timeout Canceled.")
 				return response, ctx.Err()
 			}
 		case responseCh := <-respCh:
 			response = responseCh
+			logs.Info(requestId, time.Now(), "response:", response)
+
 			return response, nil
 		}
 	}
@@ -95,18 +97,21 @@ func (s *DubboService) RecommenderInfer(ctx context.Context, in *io.RecRequest) 
 func (s *DubboService) recommenderInferContext(ctx context.Context, in *io.RecRequest, respCh chan *io.RecResponse) {
 	defer func() {
 		if info := recover(); info != nil {
-			fmt.Println("panic", info)
+			logs.Fatal("panic", info)
 		} //else {
-		//  fmt.Println("finish.")
+		//  logs.Info("finish.")
 		//}
 	}()
 
 	response := &io.RecResponse{}
 	response.SetCode(404)
+	requestId := utils.CreateRequestId(in)
 
 	//nacos listen
 	nacosFactory := nacos.NacosFactory{}
 	nacosConfig := nacosFactory.CreateNacosConfig(s.nacosIp, uint64(s.nacosPort), in)
+	logs.Debug(requestId, time.Now(), "nacosConfig:", nacosConfig)
+
 	nacosConfig.StartListenNacos()
 
 	//infer
@@ -125,17 +130,20 @@ func (s *DubboService) recommenderInferContext(ctx context.Context, in *io.RecRe
 func (s *DubboService) recommenderInferHystrix(serverName string, in *io.RecRequest, ServiceConfig *config_loader.ServiceConfig) (*io.RecResponse, error) {
 	response := &io.RecResponse{}
 	response.SetCode(404)
+	requestId := utils.CreateRequestId(in)
 
 	hystrixErr := hystrix.Do(serverName, func() error {
 		// request recall / rank func.
 		response_, err_ := s.modelInfer(in, ServiceConfig)
 		if err_ != nil {
-			logs.Error(err_)
+			logs.Error(requestId, time.Now(), err_)
 			return err_
 		} else {
 			response = response_
 		}
-		return nil
+		logs.Debug(requestId, time.Now(), "hystrix unreduce response:", response)
+
+		return err_
 	}, func(err error) error {
 		//INFO: do this when services are timeout (hystrix timeout).
 		// less items and simple model.
@@ -146,12 +154,14 @@ func (s *DubboService) recommenderInferHystrix(serverName string, in *io.RecRequ
 		in.SetItemList(itemList[:s.lowerRankNum])
 		response_, err_ := s.modelInferReduce(in, ServiceConfig)
 		if err_ != nil {
-			logs.Error(err_)
+			logs.Error(requestId, time.Now(), err_)
 			return err_
 		} else {
 			response = response_
 		}
-		return nil
+		logs.Debug(requestId, time.Now(), "hystrix reduce response:", response)
+
+		return err
 	})
 
 	if hystrixErr != nil {
@@ -164,6 +174,7 @@ func (s *DubboService) recommenderInferHystrix(serverName string, in *io.RecRequ
 func (s *DubboService) modelInfer(in *io.RecRequest, ServiceConfig *config_loader.ServiceConfig) (*io.RecResponse, error) {
 	response := &io.RecResponse{}
 	response.SetCode(404)
+	requestId := utils.CreateRequestId(in)
 
 	//build model by model_factory
 	modelName := in.GetModelType()
@@ -171,15 +182,22 @@ func (s *DubboService) modelInfer(in *io.RecRequest, ServiceConfig *config_loade
 		modelName = strings.ToLower(modelName)
 	}
 
-	//strategy pattern
-	modelfactory := model.ModelStrategyFactory{}
-	modelStrategy := modelfactory.CreateModelStrategy(modelName, in, ServiceConfig)
+	//strategy pattern. share model
+	var modelStrategy model.ModelStrategyInterface
 	modelStrategyContext := model.ModelStrategyContext{}
+	_, ok := model.ShareModelsMap[in.GetDataId()]
+	if !ok {
+		modelfactory := model.ModelStrategyFactory{}
+		modelStrategy = modelfactory.CreateModelStrategy(modelName, ServiceConfig)
+		model.ShareModelsMap[in.GetDataId()] = modelStrategy
+	} else {
+		modelStrategy = model.ShareModelsMap[in.GetDataId()]
+	}
 	modelStrategyContext.SetModelStrategy(modelStrategy)
 
-	result, err := modelStrategyContext.ModelInferSkywalking(nil)
+	result, err := modelStrategyContext.ModelInferSkywalking(requestId, in.GetUserId(), in.GetItemList(), nil)
 	if err != nil {
-		logs.Error(err)
+		logs.Error(requestId, time.Now(), err)
 		return response, err
 	}
 
@@ -208,6 +226,7 @@ func (s *DubboService) modelInfer(in *io.RecRequest, ServiceConfig *config_loade
 func (s *DubboService) modelInferReduce(in *io.RecRequest, ServiceConfig *config_loader.ServiceConfig) (*io.RecResponse, error) {
 	response := &io.RecResponse{}
 	response.SetCode(404)
+	requestId := utils.CreateRequestId(in)
 
 	//build model by model_factory
 	// modelName := in.GetModelType()
@@ -217,14 +236,22 @@ func (s *DubboService) modelInferReduce(in *io.RecRequest, ServiceConfig *config
 
 	modelName := "fm"
 
-	//strategy pattern
-	modelfactory := model.ModelStrategyFactory{}
-	modelStrategy := modelfactory.CreateModelStrategy(modelName, in, ServiceConfig)
+	//strategy pattern. share model
+	var modelStrategy model.ModelStrategyInterface
 	modelStrategyContext := model.ModelStrategyContext{}
+	_, ok := model.ShareModelsMap[in.GetDataId()]
+	if !ok {
+		modelfactory := model.ModelStrategyFactory{}
+		modelStrategy = modelfactory.CreateModelStrategy(modelName, ServiceConfig)
+		model.ShareModelsMap[in.GetDataId()] = modelStrategy
+	} else {
+		modelStrategy = model.ShareModelsMap[in.GetDataId()]
+	}
 	modelStrategyContext.SetModelStrategy(modelStrategy)
-	result, err := modelStrategyContext.ModelInferSkywalking(nil)
+
+	result, err := modelStrategyContext.ModelInferSkywalking(requestId, in.GetDataId(), in.GetItemList(), nil)
 	if err != nil {
-		logs.Error(err)
+		logs.Error(requestId, time.Now(), err)
 		return response, err
 	}
 	//package infer result.
