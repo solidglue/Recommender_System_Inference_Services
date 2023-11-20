@@ -1,0 +1,22 @@
+###############################
+#
+#build faiss docker mir
+#
+###############################
+
+FROM golang:alpine
+MAINTAINER loki
+ENV VERSION 1.0.0
+
+WORKDIR /data/faiss
+
+COPY /data/loki/the-infer/scripts/deployments/faiss/faiss_start.sh /data/faiss   #copy start scripts
+
+# gRPC
+EXPOSE 5000
+
+# Set where models should be stored in the container
+ENV MODEL_BASE_PATH=/data/faiss
+RUN mkdir -p ${MODEL_BASE_PATH}
+
+ENTRYPOINT ["/data/faiss/faiss_start.sh"]

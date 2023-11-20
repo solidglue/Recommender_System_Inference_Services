@@ -1,0 +1,31 @@
+###############################
+#
+#build go project docker mir
+#
+###############################
+
+FROM golang:alpine
+MAINTAINER loki
+ENV VERSION 1.0.0
+
+WORKDIR /data/infer
+
+# copy start file and config files
+COPY /data/loki/the-infer/cmd/infer/main/recsys-go-infer /data/infer   #copy go file
+COPY /data/loki/the-infer/configs/dubbo/dubbo_server-1_config.yml /data/infer/configs   #copy config file
+COPY /data/loki/the-infer/configs/dubbo/dubbo_server-2_config.yml /data/infer/configs
+COPY /data/loki/the-infer/configs/nacos/service_start_config.json /data/infer/configs
+COPY /data/loki/the-infer/scripts/deployments/infer/services_start.sh /data/infer   #copy start scripts
+
+# Expose ports
+# REST
+EXPOSE 6020
+
+# gRPC
+EXPOSE 6021
+
+# Set where models should be stored in the container
+ENV MODEL_BASE_PATH=/data/infer/configs
+RUN mkdir -p ${MODEL_BASE_PATH}
+
+ENTRYPOINT ["/data/infer/services_start.sh"]
