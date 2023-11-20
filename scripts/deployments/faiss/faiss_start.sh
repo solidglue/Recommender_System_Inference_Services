@@ -1,1 +1,3 @@
-# start script in docker.
+#/bin/bash
+
+./faiss
