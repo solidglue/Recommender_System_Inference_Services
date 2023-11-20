@@ -1,5 +1,5 @@
 {
-	"dataId": "dataid-001",
+	"dataId": "inferid-001",
 	"group": "infer",
 	"namespace": "",
 	"content": {  "_comment":" // from local only include content. whole info from nacos",

@@ -4,7 +4,7 @@ dubbo:
   application:
     name: infer # metadata: application=myApp; name=myApp
     module: dubbogo #metadata: module=opensource
-    group: infer-001 # no metadata record
+    group: recsys # no metadata record
     organization: dubbo # metadata: organization=dubbo
     owner:  # metadata: owner=laurence
     version: 1.0.0 # metadata: app.version=myversion
@@ -17,7 +17,7 @@ dubbo:
   protocols:
     dubbo:
       name: dubbo # 
-      port: 10000 #      
+      port: 10001 #      
   provider:
     register: true
     registryIDS:
