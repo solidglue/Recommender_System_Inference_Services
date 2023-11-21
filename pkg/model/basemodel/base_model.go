@@ -167,16 +167,29 @@ func (d *BaseModel) GetInferExampleFeaturesNotContainItems(userId string, itemLi
 
 	}
 
-	// if not hit cache, get features from redis and request.
-	userExampleFeatures, err = d.getUserExampleFeatures(userId)
-	if err != nil {
-		logs.Error(err)
-		return exampleData, err
-	}
-	userContextExampleFeatures, err = d.getUserContextExampleFeatures(userId)
-	if err != nil {
-		logs.Error(err)
-		return exampleData, err
+	//INFO:Asynchronous invocation of user offline samples, user real-time samples, and item samples
+	//INFO:The process of constructing samples is independent
+	userOfflineExampleCh := make(chan *internal.SeqExampleBuff, 1)
+	userOnlineExampleCh := make(chan *internal.SeqExampleBuff, 1)
+
+	//get user offline example
+	go d.getUserExampleFeatures(userId, userOfflineExampleCh)
+	//get user online example
+	go d.getUserContextExampleFeatures(userId, userOnlineExampleCh)
+
+	index_ := 0
+	for {
+		select {
+		case userExampleFeatures_ := <-userOfflineExampleCh:
+			userExampleFeatures = userExampleFeatures_
+			index_ += 1
+		case userContextExampleFeatures_ := <-userOnlineExampleCh:
+			userContextExampleFeatures = userContextExampleFeatures_
+			index_ += 1
+		}
+		if index_ == 2 {
+			break
+		}
 	}
 
 	exampleData = internal.ExampleFeatures{
@@ -223,23 +236,37 @@ func (d *BaseModel) GetInferExampleFeaturesContainItems(userId string, itemList 
 
 	}
 
-	// if not hit cache, get features from redis and request.
-	userExampleFeatures, err = d.getUserExampleFeatures(userId)
-	if err != nil {
-		return exampleData, err
-	}
-	userContextExampleFeatures, err = d.getUserContextExampleFeatures(userId)
-	if err != nil {
-		return exampleData, err
-	}
+	//INFO:Asynchronous invocation of user offline samples, user real-time samples, and item samples
+	//INFO:The process of constructing samples is independent
+	userOfflineExampleCh := make(chan *internal.SeqExampleBuff, 1)
+	userOnlineExampleCh := make(chan *internal.SeqExampleBuff, 1)
+	itemListExampleCh := make(chan *[]internal.SeqExampleBuff, 100)
 
+	//get user offline example
+	go d.getUserExampleFeatures(userId, userOfflineExampleCh)
+	//get user online example
+	go d.getUserContextExampleFeatures(userId, userOnlineExampleCh)
 	//get items features.
-	itemExampleFeaturesTmp, err := d.getItemExamplesFeatures(itemList)
-	if err != nil {
-		return exampleData, err
+	go d.getItemExamplesFeatures(itemList, itemListExampleCh)
+
+	index_ := 0
+	for {
+		select {
+		case userExampleFeatures_ := <-userOfflineExampleCh:
+			userExampleFeatures = userExampleFeatures_
+			index_ += 1
+		case userContextExampleFeatures_ := <-userOnlineExampleCh:
+			userContextExampleFeatures = userContextExampleFeatures_
+			index_ += 1
+		case itemExampleFeaturesList_ := <-itemListExampleCh:
+			itemExampleFeaturesList = *itemExampleFeaturesList_
+			index_ += 1
+		}
+		if index_ == 3 {
+			break
+		}
 	}
 
-	itemExampleFeaturesList = *itemExampleFeaturesTmp
 	exampleData = internal.ExampleFeatures{
 		UserExampleFeatures:        userExampleFeatures,
 		UserContextExampleFeatures: userContextExampleFeatures,
@@ -253,34 +280,47 @@ func (d *BaseModel) GetInferExampleFeaturesContainItems(userId string, itemList 
 	return exampleData, nil
 }
 
-func (d *BaseModel) getItemExamplesFeatures(itemList []string) (*[]internal.SeqExampleBuff, error) {
+func (d *BaseModel) getItemExamplesFeatures(itemList []string, ch chan<- *[]internal.SeqExampleBuff) {
 	//TODO: use bloom filter check items, avoid all items search redis.
 	redisKeyPrefix := d.serviceConfig.GetModelConfig().GetItemRedisKeyPre()
 	itemSeqExampleBuffs := make([]internal.SeqExampleBuff, 0)
-	for _, itemId := range itemList {
-		redisKey := redisKeyPrefix + itemId
-		if d.GetItemBloomFilter().Test([]byte(itemId)) {
-			userExampleFeats, err := d.serviceConfig.GetRedisConfig().GetRedisPool().Get(redisKey)
-			itemExampleFeatsBuff := make([]byte, 0)
-			if err != nil {
-				return &itemSeqExampleBuffs, nil
-			} else {
-				itemExampleFeatsBuff = []byte(userExampleFeats)
-			}
+	var itemWg sync.WaitGroup
+	itemsCh := make(chan internal.SeqExampleBuff, 100)
 
-			itemSeqExampleBuff := internal.SeqExampleBuff{
-				Key:  &itemId,
-				Buff: &itemExampleFeatsBuff,
+	for _, itemId := range itemList {
+		itemWg.Add(1)
+		go func(itemId string) {
+			defer itemWg.Done()
+			redisKey := redisKeyPrefix + itemId
+			if d.GetItemBloomFilter().Test([]byte(itemId)) {
+				userExampleFeats, err := d.serviceConfig.GetRedisConfig().GetRedisPool().Get(redisKey)
+				itemExampleFeatsBuff := make([]byte, 0)
+				if err != nil {
+					logs.Error(err)
+				} else {
+					itemExampleFeatsBuff = []byte(userExampleFeats)
+				}
+
+				itemSeqExampleBuff := internal.SeqExampleBuff{
+					Key:  &itemId,
+					Buff: &itemExampleFeatsBuff,
+				}
+				itemsCh <- itemSeqExampleBuff
 			}
+		}(itemId)
+		wg.Wait()
+		for idx := 0; idx < 100; idx++ {
+			itemSeqExampleBuff := <-itemsCh
 			itemSeqExampleBuffs = append(itemSeqExampleBuffs, itemSeqExampleBuff)
 		}
+		close(itemsCh)
 	}
 
-	return &itemSeqExampleBuffs, nil
+	ch <- &itemSeqExampleBuffs
 }
 
 // get user tfrecords offline samples
-func (b *BaseModel) getUserExampleFeatures(userId string) (*internal.SeqExampleBuff, error) {
+func (b *BaseModel) getUserExampleFeatures(userId string, ch chan<- *internal.SeqExampleBuff) {
 	//INFO: use bloom filter check users, avoid all users search redis.
 
 	userSeqExampleBuff := internal.SeqExampleBuff{}
@@ -290,8 +330,7 @@ func (b *BaseModel) getUserExampleFeatures(userId string) (*internal.SeqExampleB
 	if b.userBloomFilter.Test([]byte(userId)) {
 		userExampleFeats, err := b.serviceConfig.GetRedisConfig().GetRedisPool().Get(redisKey)
 		if err != nil {
-			//logs.Error("get item features err", err)
-			return &userSeqExampleBuff, err
+			logs.Error("get item features err", err)
 		} else {
 			userExampleFeatsBuff = []byte(userExampleFeats) //.(string)
 		}
@@ -303,11 +342,11 @@ func (b *BaseModel) getUserExampleFeatures(userId string) (*internal.SeqExampleB
 		Buff: &userExampleFeatsBuff,
 	}
 
-	return &userSeqExampleBuff, nil
+	ch <- &userSeqExampleBuff
 }
 
 // get user tfrecords online samples
-func (b *BaseModel) getUserContextExampleFeatures(userId string) (*internal.SeqExampleBuff, error) {
+func (b *BaseModel) getUserContextExampleFeatures(userId string, ch chan<- *internal.SeqExampleBuff) {
 	//TODO: use bloom filter check users, avoid all users search redis.
 	userContextSeqExampleBuff := internal.SeqExampleBuff{}
 	userContextExampleFeatsBuff := make([]byte, 0)
@@ -319,7 +358,7 @@ func (b *BaseModel) getUserContextExampleFeatures(userId string) (*internal.SeqE
 		Buff: &userContextExampleFeatsBuff,
 	}
 
-	return &userContextSeqExampleBuff, nil
+	ch <- &userContextSeqExampleBuff
 }
 
 // request tfserving service by grpc
