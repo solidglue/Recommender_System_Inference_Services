@@ -44,7 +44,6 @@ type BaseModel struct {
 	serviceConfig   *config_loader.ServiceConfig
 	userBloomFilter *bloom.BloomFilter
 	itemBloomFilter *bloom.BloomFilter
-	modelType       string //rank or recall
 }
 
 func init() {
@@ -240,7 +239,7 @@ func (d *BaseModel) GetInferExampleFeaturesContainItems(userId string, itemList 
 	//INFO:The process of constructing samples is independent
 	userOfflineExampleCh := make(chan *internal.SeqExampleBuff, 1)
 	userOnlineExampleCh := make(chan *internal.SeqExampleBuff, 1)
-	itemListExampleCh := make(chan *[]internal.SeqExampleBuff, 100)
+	itemListExampleCh := make(chan *[]internal.SeqExampleBuff, 1)
 
 	//get user offline example
 	go d.getUserExampleFeatures(userId, userOfflineExampleCh)
