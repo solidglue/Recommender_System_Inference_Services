@@ -177,6 +177,8 @@ func (d *BaseModel) GetInferExampleFeaturesNotContainItems(userId string, itemLi
 	go d.getUserContextExampleFeatures(userId, userOnlineExampleCh)
 
 	index_ := 0
+
+loop:
 	for {
 		select {
 		case userExampleFeatures_ := <-userOfflineExampleCh:
@@ -187,7 +189,7 @@ func (d *BaseModel) GetInferExampleFeaturesNotContainItems(userId string, itemLi
 			index_ += 1
 		}
 		if index_ == 2 {
-			break
+			break loop
 		}
 	}
 
@@ -249,6 +251,8 @@ func (d *BaseModel) GetInferExampleFeaturesContainItems(userId string, itemList 
 	go d.getItemExamplesFeatures(itemList, itemListExampleCh)
 
 	index_ := 0
+
+loop:
 	for {
 		select {
 		case userExampleFeatures_ := <-userOfflineExampleCh:
@@ -262,7 +266,7 @@ func (d *BaseModel) GetInferExampleFeaturesContainItems(userId string, itemList 
 			index_ += 1
 		}
 		if index_ == 3 {
-			break
+			break loop
 		}
 	}
 
