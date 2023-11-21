@@ -2,6 +2,7 @@ package services
 
 import (
 	"infer-microservices/internal/flags"
+	"infer-microservices/pkg/services/baseservice"
 	dubbo_service "infer-microservices/pkg/services/dubbo_service"
 	grpc_service "infer-microservices/pkg/services/grpc_service"
 	rest_service "infer-microservices/pkg/services/rest_service"
@@ -38,13 +39,37 @@ func init() {
 	lowerRankNum = *flagHystrix.GetHystrixLowerRankNum()
 }
 
+// create base server
+func (f ServiceFactory) createBaseServiceSkywalking() *baseservice.BaseService {
+	baseService := new(baseservice.BaseService)
+	baseService.SetNacosIp(nacosIp)
+	baseService.SetNacosPort(uint(nacosPort))
+	baseService.SetSkywalkingWeatherOpen(skywalkingWeatherOpen)
+	baseService.SetSkywalkingIp(skywalkingIp)
+	baseService.SetSkywalkingPort(uint(skywalkingPort))
+	baseService.SetSkywalkingServerName(skywalkingServerName)
+	baseService.SetLowerRankNum(lowerRankNum)
+	baseService.SetLowerRecallNum(lowerRecallNum)
+
+	return baseService
+}
+
+// create base server
+func (f ServiceFactory) createBaseServiceNoSkywalking() *baseservice.BaseService {
+	baseService := new(baseservice.BaseService)
+	baseService.SetNacosIp(nacosIp)
+	baseService.SetNacosPort(uint(nacosPort))
+	baseService.SetSkywalkingWeatherOpen(false)
+	baseService.SetLowerRankNum(lowerRankNum)
+	baseService.SetLowerRecallNum(lowerRecallNum)
+
+	return baseService
+}
+
 // create dubbo server
 func (f ServiceFactory) CreateDubboService() *dubbo_service.DubboService {
 	dubboService := new(dubbo_service.DubboService)
-	dubboService.SetNacosIp(nacosIp)
-	dubboService.SetNacosPort(uint(nacosPort))
-	dubboService.SetLowerRankNum(lowerRankNum)
-	dubboService.SetLowerRecallNum(lowerRecallNum)
+	dubboService.SetBaseService(f.createBaseServiceNoSkywalking())
 
 	return dubboService
 }
@@ -52,11 +77,7 @@ func (f ServiceFactory) CreateDubboService() *dubbo_service.DubboService {
 // create grpc server
 func (f ServiceFactory) CreateGrpcService() *grpc_service.GrpcService {
 	grpcService := new(grpc_service.GrpcService)
-	grpcService.SetNacosIp(nacosIp)
-	grpcService.SetNacosPort(uint(nacosPort))
-	grpcService.SetSkywalkingWeatherOpen(false)
-	grpcService.SetLowerRankNum(lowerRankNum)
-	grpcService.SetLowerRecallNum(lowerRecallNum)
+	grpcService.SetBaseService(f.createBaseServiceNoSkywalking())
 
 	return grpcService
 }
@@ -64,14 +85,7 @@ func (f ServiceFactory) CreateGrpcService() *grpc_service.GrpcService {
 // create rest server
 func (f ServiceFactory) CreateRestService() *rest_service.HttpService {
 	restService := new(rest_service.HttpService)
-	restService.SetNacosIp(nacosIp)
-	restService.SetNacosPort(uint(nacosPort))
-	restService.SetSkywalkingWeatherOpen(skywalkingWeatherOpen)
-	restService.SetSkywalkingIp(skywalkingIp)
-	restService.SetSkywalkingPort(uint(skywalkingPort))
-	restService.SetSkywalkingServerName(skywalkingServerName)
-	restService.SetLowerRankNum(lowerRankNum)
-	restService.SetLowerRecallNum(lowerRecallNum)
+	restService.SetBaseService(f.createBaseServiceSkywalking())
 
 	return restService
 }

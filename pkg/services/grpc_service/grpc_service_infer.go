@@ -4,53 +4,32 @@ import (
 	"errors"
 	"fmt"
 	config_loader "infer-microservices/pkg/config_loader"
-	"infer-microservices/pkg/model"
 	"infer-microservices/pkg/utils"
-	"strings"
-	"sync"
 	"time"
 
 	"infer-microservices/pkg/logs"
 	nacos "infer-microservices/pkg/nacos"
+	"infer-microservices/pkg/services/baseservice"
 	"infer-microservices/pkg/services/io"
 
-	"github.com/afex/hystrix-go/hystrix"
 	"golang.org/x/net/context"
 )
 
-var inferWg sync.WaitGroup
-
+// extend from  baseservice
 type GrpcService struct {
-	nacosIp               string
-	nacosPort             uint
-	skywalkingWeatherOpen bool
-	lowerRankNum          int
-	lowerRecallNum        int
+	baseservice *baseservice.BaseService
 }
 
-// set func
-func (s *GrpcService) SetNacosIp(nacosIp string) {
-	s.nacosIp = nacosIp
+func (s *GrpcService) SetBaseService(baseservice *baseservice.BaseService) {
+	s.baseservice = baseservice
 }
 
-func (s *GrpcService) SetNacosPort(nacosPort uint) {
-	s.nacosPort = nacosPort
-}
-
-func (s *GrpcService) SetSkywalkingWeatherOpen(skywalkingWeatherOpen bool) {
-	s.skywalkingWeatherOpen = skywalkingWeatherOpen
-}
-
-func (s *GrpcService) SetLowerRankNum(lowerRankNum int) {
-	s.lowerRankNum = lowerRankNum
-}
-
-func (s *GrpcService) SetLowerRecallNum(lowerRecallNum int) {
-	s.lowerRecallNum = lowerRecallNum
+func (s *GrpcService) GetBaseService() *baseservice.BaseService {
+	return s.baseservice
 }
 
 // INFO: implement grpc func which defined by proto.
-func (g *GrpcService) RecommenderInfer(ctx context.Context, in *RecommendRequest) (*RecommendResponse, error) {
+func (s *GrpcService) RecommenderInfer(ctx context.Context, in *RecommendRequest) (*RecommendResponse, error) {
 	//INFO: set timeout by context, degraded service by hystix.
 	response := &RecommendResponse{
 		Code: 404,
@@ -63,7 +42,7 @@ func (g *GrpcService) RecommenderInfer(ctx context.Context, in *RecommendRequest
 	defer cancelFunc()
 
 	respCh := make(chan *RecommendResponse, 100)
-	go g.recommenderInferContext(ctx, in, respCh)
+	go s.recommenderInferContext(ctx, in, respCh)
 	for {
 		select {
 		case <-ctx.Done():
@@ -109,19 +88,26 @@ func (s *GrpcService) recommenderInferContext(ctx context.Context, in *Recommend
 
 	//nacos listen
 	nacosFactory := nacos.NacosFactory{}
-	nacosConfig := nacosFactory.CreateNacosConfig(s.nacosIp, uint64(s.nacosPort), &request)
+	nacosConfig := nacosFactory.CreateNacosConfig(s.baseservice.GetNacosIp(), uint64(s.baseservice.GetNacosPort()), &request)
 	logs.Debug(requestId, time.Now(), "nacosConfig:", nacosConfig)
 
 	nacosConfig.StartListenNacos()
 
 	//infer
 	ServiceConfig := config_loader.ServiceConfigs[in.GetDataId()]
-	response_, err := s.recommenderInferHystrix("GrpcService", &request, ServiceConfig)
+	response_, err := s.baseservice.RecommenderInferHystrix(nil, "GrpcService", &request, ServiceConfig)
 	if err != nil {
 		response.Message = fmt.Sprintf("%s", err)
 		panic(err)
 	} else {
-		response = response_
+		response = &RecommendResponse{
+			Code:    response_["code"].(int32),
+			Message: response_["message"].(string),
+			Data: &ItemInfoList{
+				Iteminfo_: response_["data"].([]*ItemInfo),
+			},
+		}
+
 	}
 	respCh <- response
 }
@@ -136,180 +122,4 @@ func convertGrpcRequestToRecRequest(in *RecommendRequest) io.RecRequest {
 	request.SetItemList(in.ItemList.Value)
 
 	return request
-}
-
-func (s *GrpcService) recommenderInferHystrix(serverName string, in *io.RecRequest, ServiceConfig *config_loader.ServiceConfig) (*RecommendResponse, error) {
-	response := &RecommendResponse{
-		Code: 404,
-	}
-	requestId := utils.CreateRequestId(in)
-
-	hystrixErr := hystrix.Do(serverName, func() error {
-		// request recall / rank func.
-		response_, err := s.modelInfer(in, ServiceConfig)
-		if err != nil {
-			logs.Error(requestId, time.Now(), err)
-			return err
-		} else {
-			response = response_
-		}
-
-		return err
-	}, func(err error) error {
-		//INFO: do this when services are timeout (hystrix timeout).
-		// less items and simple model.
-		itemList := in.GetItemList()
-		in.SetRecallNum(int32(s.lowerRecallNum))
-		in.SetItemList(itemList[:s.lowerRankNum])
-		response_, err_ := s.modelInferReduce(in, ServiceConfig)
-
-		if err_ != nil {
-			logs.Error(requestId, time.Now(), err_)
-			return err_
-		} else {
-			response = response_
-		}
-
-		return err
-	})
-
-	if hystrixErr != nil {
-		return response, hystrixErr
-	}
-
-	return response, nil
-}
-
-func (s *GrpcService) modelInfer(in *io.RecRequest, ServiceConfig *config_loader.ServiceConfig) (*RecommendResponse, error) {
-	response := &RecommendResponse{
-		Code: 404,
-	}
-	requestId := utils.CreateRequestId(in)
-
-	//build model by model_factory
-	modelName := in.GetModelType()
-	if modelName != "" {
-		modelName = strings.ToLower(modelName)
-	}
-
-	//strategy pattern. share model
-	var modelStrategy model.ModelStrategyInterface
-	modelStrategyContext := model.ModelStrategyContext{}
-	_, ok := model.ShareModelsMap[in.GetDataId()]
-	if !ok {
-		modelfactory := model.ModelStrategyFactory{}
-		modelStrategy = modelfactory.CreateModelStrategy(modelName, ServiceConfig)
-		model.ShareModelsMap[in.GetDataId()] = modelStrategy
-	} else {
-		modelStrategy = model.ShareModelsMap[in.GetDataId()]
-	}
-	modelStrategyContext.SetModelStrategy(modelStrategy)
-
-	var err error
-	var responseTf map[string]interface{}
-
-	if s.skywalkingWeatherOpen {
-		responseTf, err = modelStrategyContext.ModelInferSkywalking(requestId, in.GetDataId(), in.GetItemList(), nil)
-	} else {
-		responseTf, err = modelStrategyContext.ModelInferNoSkywalking(requestId, in.GetDataId(), in.GetItemList(), nil)
-	}
-	if err != nil {
-		logs.Error(requestId, time.Now(), err)
-		return response, err
-	}
-
-	result := make([]*ItemInfo, 0)
-	resultList := responseTf["data"].([]map[string]interface{})
-	rankCh := make(chan *ItemInfo, len(resultList))
-	for i := 0; i < len(resultList); i++ {
-		inferWg.Add(1)
-		go formatGrpcResponse(resultList[i], rankCh)
-	}
-
-	inferWg.Wait()
-	close(rankCh)
-	for itemScore := range rankCh {
-		result = append(result, itemScore)
-	}
-
-	response = &RecommendResponse{
-		Code:    200,
-		Message: "success",
-		Data: &ItemInfoList{
-			Iteminfo_: result,
-		},
-	}
-
-	return response, nil
-}
-
-func (s *GrpcService) modelInferReduce(in *io.RecRequest, ServiceConfig *config_loader.ServiceConfig) (*RecommendResponse, error) {
-	response := &RecommendResponse{
-		Code: 404,
-	}
-	requestId := utils.CreateRequestId(in)
-
-	//build model by model_factory
-	// modelName := in.GetModelType()
-	// if modelName != "" {
-	// 	modelName = strings.ToLower(modelName)
-	// }
-
-	modelName := "fm"
-
-	//strategy pattern. share model
-	var modelStrategy model.ModelStrategyInterface
-	modelStrategyContext := model.ModelStrategyContext{}
-	_, ok := model.ShareModelsMap[in.GetDataId()]
-	if !ok {
-		modelfactory := model.ModelStrategyFactory{}
-		modelStrategy = modelfactory.CreateModelStrategy(modelName, ServiceConfig)
-		model.ShareModelsMap[in.GetDataId()] = modelStrategy
-	} else {
-		modelStrategy = model.ShareModelsMap[in.GetDataId()]
-	}
-	modelStrategyContext.SetModelStrategy(modelStrategy)
-
-	responseTf, err := modelStrategyContext.ModelInferSkywalking(requestId, in.GetDataId(), in.GetItemList(), nil)
-	if err != nil {
-		logs.Error(requestId, time.Now(), err)
-		return response, err
-	}
-
-	result := make([]*ItemInfo, 0)
-	resultList := responseTf["data"].([]map[string]interface{})
-	rankCh := make(chan *ItemInfo, len(resultList))
-	for i := 0; i < len(resultList); i++ {
-		inferWg.Add(1)
-		go formatGrpcResponse(resultList[i], rankCh)
-	}
-
-	inferWg.Wait()
-	close(rankCh)
-	for itemScore := range rankCh {
-		result = append(result, itemScore)
-	}
-
-	response = &RecommendResponse{
-		Code:    200,
-		Message: "success",
-		Data: &ItemInfoList{
-			Iteminfo_: result,
-		},
-	}
-
-	return response, nil
-}
-
-func formatGrpcResponse(itemScore map[string]interface{}, rankCh chan *ItemInfo) {
-	defer inferWg.Done()
-
-	itemid := itemScore["itemid"].(string)
-	score := float32(itemScore["score"].(float64))
-	itemInfo := &ItemInfo{
-		Itemid: itemid,
-		Score:  score,
-	}
-
-	rankCh <- itemInfo
 }

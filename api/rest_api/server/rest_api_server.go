@@ -104,9 +104,9 @@ func (s *HttpServiceApi) ServiceStart() {
 		internal.AuthHandler, s.httpService.RecommenderInfer,
 	}
 
-	if s.httpService.GetSkywalkingWeatherOpen() {
-		go2skyAddr := s.httpService.GetSkywalkingIp() + ":" + fmt.Sprintf(":%d", s.httpService.GetSkywalkingPort())
-		go s.restSkywalkingServerRunner(go2skyAddr, s.httpService.GetSkywalkingServerName(), paths, InferFuncs)
+	if s.httpService.GetBaseService().GetSkywalkingWeatherOpen() {
+		go2skyAddr := s.httpService.GetBaseService().GetSkywalkingIp() + ":" + fmt.Sprintf(":%d", s.httpService.GetBaseService().GetSkywalkingPort())
+		go s.restSkywalkingServerRunner(go2skyAddr, s.httpService.GetBaseService().GetSkywalkingServerName(), paths, InferFuncs)
 	} else {
 		go s.restNoskywalkingServerRunner(paths, InferFuncs)
 	}
