@@ -15,8 +15,9 @@ var ShareModelsMap map[string]ModelStrategyInterface
 
 type ModelStrategyInterface interface {
 	//model infer.
-	ModelInferSkywalking(requestId string, userId string, itemList []string, r *http.Request) (map[string]interface{}, error)
-	ModelInferNoSkywalking(requestId string, userId string, itemList []string, r *http.Request) (map[string]interface{}, error)
+	GetModelType() string
+	ModelInferSkywalking(requestId string, userId string, itemList []string, r *http.Request, createSample basemodel.CreateSampleCallBackFunc) (map[string]interface{}, error)
+	ModelInferNoSkywalking(requestId string, userId string, itemList []string, r *http.Request, createSample basemodel.CreateSampleCallBackFunc) (map[string]interface{}, error)
 }
 
 type ModelStrategyFactory struct {
@@ -33,16 +34,16 @@ func (m *ModelStrategyFactory) CreateModelStrategy(modelName string, serverConn 
 	baseModel.SetServiceConfig(serverConn)
 
 	//dssm model
-	dssmModel := &dssm.Dssm{
-		BaseModel: *baseModel,
-	}
+	dssmModel := &dssm.Dssm{}
+	dssmModel.SetBaseModel(*baseModel)
+	dssmModel.SetRetNum(serverConn.GetFaissIndexConfig().GetRecallNum())
+	dssmModel.SetModelType("recall")
 	modelStrategyMap["dssm"] = dssmModel
 
 	//deepfm model
-	deepfmModel := &deepfm.DeepFM{
-		BaseModel: *baseModel,
-	}
-
+	deepfmModel := &deepfm.DeepFM{}
+	deepfmModel.SetBaseModel(*baseModel)
+	deepfmModel.SetModelType("rank")
 	modelStrategyMap["deepfm"] = deepfmModel
 
 	// modelStrategyMap["lr"] = lrModel

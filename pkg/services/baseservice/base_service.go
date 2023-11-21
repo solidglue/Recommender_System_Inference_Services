@@ -4,6 +4,7 @@ import (
 	config_loader "infer-microservices/pkg/config_loader"
 	"infer-microservices/pkg/logs"
 	"infer-microservices/pkg/model"
+	"infer-microservices/pkg/model/basemodel"
 	"infer-microservices/pkg/services/io"
 	"infer-microservices/pkg/utils"
 	"net/http"
@@ -29,7 +30,6 @@ type BaseService struct {
 }
 
 // set func
-
 func (s *BaseService) SetNacosIp(nacosIp string) {
 	s.nacosIp = nacosIp
 }
@@ -160,7 +160,9 @@ func (s *BaseService) modelInfer(r *http.Request, in *io.RecRequest, ServiceConf
 	}
 	modelStrategyContext.SetModelStrategy(modelStrategy)
 
-	result, err := modelStrategyContext.ModelInferSkywalking(requestId, in.GetUserId(), in.GetItemList(), r)
+	//use callback func to create sample
+	createSampleFunc := basemodel.SampleCallBackFuncMap[strings.ToLower(modelStrategy.GetModelType())]
+	result, err := modelStrategyContext.ModelInferSkywalking(requestId, in.GetUserId(), in.GetItemList(), r, createSampleFunc)
 	if err != nil {
 		logs.Error(requestId, time.Now(), err)
 		return response, err
@@ -214,7 +216,9 @@ func (s *BaseService) modelInferReduce(r *http.Request, in *io.RecRequest, Servi
 	}
 	modelStrategyContext.SetModelStrategy(modelStrategy)
 
-	result, err := modelStrategyContext.ModelInferSkywalking(requestId, in.GetDataId(), in.GetItemList(), r)
+	//use callback func to create sample
+	createSampleFunc := basemodel.SampleCallBackFuncMap[strings.ToLower(modelStrategy.GetModelType())]
+	result, err := modelStrategyContext.ModelInferSkywalking(requestId, in.GetDataId(), in.GetItemList(), r, createSampleFunc)
 	if err != nil {
 		logs.Error(requestId, time.Now(), err)
 		return response, err

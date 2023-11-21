@@ -25,8 +25,9 @@ var verbose bool
 var shards int
 
 type Dssm struct {
-	basemodel.BaseModel // extend baseModel
-	retNum              int
+	basemodel basemodel.BaseModel // extend baseModel
+	retNum    int
+	modelType string
 }
 
 func init() {
@@ -58,9 +59,22 @@ func (d *Dssm) GetRetNum() int {
 	return d.retNum
 }
 
-func (d *Dssm) ModelInferSkywalking(requestId string, userId string, itemList []string, r *http.Request) (map[string]interface{}, error) {
+func (d *Dssm) SetBaseModel(basemodel basemodel.BaseModel) {
+	d.basemodel = basemodel
+}
+
+// modeltype
+func (d *Dssm) SetModelType(modelType string) {
+	d.modelType = modelType
+}
+
+func (d *Dssm) GetModelType() string {
+	return d.modelType
+}
+
+func (d *Dssm) ModelInferSkywalking(requestId string, userId string, itemList []string, r *http.Request, createSample basemodel.CreateSampleCallBackFunc) (map[string]interface{}, error) {
 	response := make(map[string]interface{}, 0)
-	cacheKeyPrefix := userId + d.BaseModel.GetServiceConfig().GetServiceId() + d.BaseModel.GetModelName()
+	cacheKeyPrefix := userId + d.basemodel.GetServiceConfig().GetServiceId() + d.basemodel.GetModelName()
 
 	tensorName := "user_embedding"
 
@@ -88,7 +102,7 @@ func (d *Dssm) ModelInferSkywalking(requestId string, userId string, itemList []
 
 	spanUnionEmFv.SetOperationName("get recall infer examples func")
 	spanUnionEmFv.Log(time.Now())
-	examples, err := d.GetInferExampleFeatures(userId, make([]string, 0))
+	examples, err := createSample(userId, itemList) //create sample by callback func
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +136,7 @@ func (d *Dssm) ModelInferSkywalking(requestId string, userId string, itemList []
 	}
 	spanUnionEmFr.SetOperationName("get recall faiss index func")
 	spanUnionEmFr.Log(time.Now())
-	recallResult, err = faiss.FaissVectorSearch(d.BaseModel.GetServiceConfig().GetFaissIndexConfig(), examples, *embeddingVector)
+	recallResult, err = faiss.FaissVectorSearch(d.basemodel.GetServiceConfig().GetFaissIndexConfig(), examples, *embeddingVector)
 	if err != nil {
 		logs.Error(err)
 		return nil, err
@@ -139,7 +153,7 @@ func (d *Dssm) ModelInferSkywalking(requestId string, userId string, itemList []
 	spanUnionEmOut.SetOperationName("get recall result func")
 
 	spanUnionEmOut.Log(time.Now())
-	recallRst, err := d.BaseModel.InferResultFormat(&recallResult)
+	recallRst, err := d.basemodel.InferResultFormat(&recallResult)
 	if err != nil {
 		return nil, err
 	}
@@ -160,9 +174,9 @@ func (d *Dssm) ModelInferSkywalking(requestId string, userId string, itemList []
 	return response, nil
 }
 
-func (d *Dssm) ModelInferNoSkywalking(requestId string, userId string, itemList []string, r *http.Request) (map[string]interface{}, error) {
+func (d *Dssm) ModelInferNoSkywalking(requestId string, userId string, itemList []string, r *http.Request, createSample basemodel.CreateSampleCallBackFunc) (map[string]interface{}, error) {
 	response := make(map[string]interface{}, 0)
-	cacheKeyPrefix := userId + d.BaseModel.GetServiceConfig().GetServiceId() + d.BaseModel.GetModelName()
+	cacheKeyPrefix := userId + d.basemodel.GetServiceConfig().GetServiceId() + d.basemodel.GetModelName()
 	tensorName := "user_embedding"
 
 	//set cache
@@ -182,7 +196,7 @@ func (d *Dssm) ModelInferNoSkywalking(requestId string, userId string, itemList 
 	}
 
 	//get infer samples.
-	examples, err := d.GetInferExampleFeatures(userId, itemList)
+	examples, err := createSample(userId, itemList) //create sample by callback func
 	if err != nil {
 		return nil, err
 	}
@@ -196,14 +210,14 @@ func (d *Dssm) ModelInferNoSkywalking(requestId string, userId string, itemList 
 
 	//request faiss index
 	recallResult := make([]*faiss_index.ItemInfo, 0)
-	recallResult, err = faiss.FaissVectorSearch(d.BaseModel.GetServiceConfig().GetFaissIndexConfig(), examples, *embeddingVector)
+	recallResult, err = faiss.FaissVectorSearch(d.basemodel.GetServiceConfig().GetFaissIndexConfig(), examples, *embeddingVector)
 	if err != nil {
 		return nil, err
 	}
 	logs.Debug(requestId, time.Now(), "recall result:", recallResult)
 
 	//format result.
-	recallRst, err := d.BaseModel.InferResultFormat(&recallResult)
+	recallRst, err := d.basemodel.InferResultFormat(&recallResult)
 	if err != nil {
 		return nil, err
 	}
@@ -232,72 +246,11 @@ func (d *Dssm) embedding(examples internal.ExampleFeatures, tensorName string) (
 	userExamples = append(userExamples, *(examples.UserExampleFeatures.Buff))
 	userContextExamples = append(userContextExamples, *(examples.UserContextExampleFeatures.Buff))
 
-	response, err := d.BaseModel.RequestTfservering(&userExamples, &itemExamples, &userContextExamples, tensorName)
+	response, err := d.basemodel.RequestTfservering(&userExamples, &itemExamples, &userContextExamples, tensorName)
 	if err != nil {
 		logs.Error(err)
 		return nil, err
 	}
 
 	return response, nil
-}
-
-// @overwrite
-func (d *Dssm) GetInferExampleFeatures(userId string, itemList []string) (internal.ExampleFeatures, error) {
-	cacheKeyPrefix := userId + d.BaseModel.GetServiceConfig().GetServiceId() + d.BaseModel.GetModelName() + "_samples"
-
-	//init examples
-	userExampleFeatures := &internal.SeqExampleBuff{}
-	userContextExampleFeatures := &internal.SeqExampleBuff{}
-	exampleData := internal.ExampleFeatures{
-		UserExampleFeatures:        userExampleFeatures,
-		UserContextExampleFeatures: userContextExampleFeatures,
-	}
-
-	//set cache
-	bigCache, err := bigcache.NewBigCache(bigCacheConfDssm)
-	if err != nil {
-		logs.Error(err)
-	}
-
-	// if hit cacha.
-	if lifeWindowS > 0 {
-
-		//INFO:MMO, go-cache can't set MaxCacheSize. change to use bigcache.
-
-		// if cacheData, ok := goCache.Get(cacheKeyPrefix); ok {
-		// 	return cacheData.(ExampleFeatures), nil
-		// }
-
-		exampleDataBytes, _ := bigCache.Get(cacheKeyPrefix)
-		err = json.Unmarshal(exampleDataBytes, &exampleData)
-		if err != nil {
-			logs.Error(err)
-		}
-		return exampleData, nil
-
-	}
-
-	// if not hit cache, get features from redis and request.
-	userExampleFeatures, err = d.BaseModel.GetUserExampleFeatures(userId)
-	if err != nil {
-		logs.Error(err)
-		return exampleData, err
-	}
-	userContextExampleFeatures, err = d.BaseModel.GetUserContextExampleFeatures(userId)
-	if err != nil {
-		logs.Error(err)
-		return exampleData, err
-	}
-
-	exampleData = internal.ExampleFeatures{
-		UserExampleFeatures:        userExampleFeatures,
-		UserContextExampleFeatures: userContextExampleFeatures,
-	}
-
-	if lifeWindowS > 0 {
-		// goCache.Set(cacheKeyPrefix, &exampleData, cacheTimeSecond)
-		bigCache.Set(cacheKeyPrefix, []byte(utils.ConvertStructToJson(exampleData)))
-	}
-
-	return exampleData, nil
 }

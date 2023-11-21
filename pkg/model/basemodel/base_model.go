@@ -2,6 +2,7 @@ package basemodel
 
 import (
 	"context"
+	"encoding/json"
 
 	"infer-microservices/internal"
 
@@ -10,10 +11,12 @@ import (
 	framework "infer-microservices/internal/tensorflow_gogofaster/core/framework"
 	tfserving "infer-microservices/internal/tfserving_gogofaster"
 	config_loader "infer-microservices/pkg/config_loader"
+	"infer-microservices/pkg/logs"
 	"infer-microservices/pkg/utils"
 	"sync"
 	"time"
 
+	"github.com/allegro/bigcache"
 	bloom "github.com/bits-and-blooms/bloom/v3"
 
 	"github.com/gogo/protobuf/types"
@@ -23,12 +26,25 @@ var wg sync.WaitGroup
 var tfservingModelVersion int64
 var tfservingTimeout int64
 var baseModelInstance *BaseModel
+var bigCacheConfBaseModel bigcache.Config
+var lifeWindowS time.Duration
+var cleanWindowS time.Duration
+var hardMaxCacheSize int
+var maxEntrySize int
+var maxEntriesInWindow int
+var verbose bool
+var shards int
+
+type CreateSampleCallBackFunc func(userId string, itemList []string) (internal.ExampleFeatures, error)
+
+var SampleCallBackFuncMap = make(map[string]CreateSampleCallBackFunc, 0)
 
 type BaseModel struct {
 	modelName       string
 	serviceConfig   *config_loader.ServiceConfig
 	userBloomFilter *bloom.BloomFilter
 	itemBloomFilter *bloom.BloomFilter
+	modelType       string //rank or recall
 }
 
 func init() {
@@ -36,6 +52,28 @@ func init() {
 	flagTensorflow := flagFactory.CreateFlagTensorflow()
 	tfservingModelVersion = *flagTensorflow.GetTfservingModelVersion()
 	tfservingTimeout = *flagTensorflow.GetTfservingTimeoutMs()
+
+	flagCache := flagFactory.CreateFlagCache()
+	lifeWindowS = time.Duration(*flagCache.GetBigcacheLifeWindowS())
+	cleanWindowS = time.Duration(*flagCache.GetBigcacheCleanWindowS())
+	hardMaxCacheSize = *flagCache.GetBigcacheHardMaxCacheSize()
+	maxEntrySize = *flagCache.GetBigcacheMaxEntrySize()
+	bigCacheConfBaseModel = bigcache.Config{
+		Shards:             shards,
+		LifeWindow:         lifeWindowS * time.Minute,
+		CleanWindow:        cleanWindowS * time.Minute,
+		MaxEntriesInWindow: maxEntriesInWindow,
+		MaxEntrySize:       maxEntrySize,
+		Verbose:            verbose,
+		HardMaxCacheSize:   hardMaxCacheSize,
+		OnRemove:           nil,
+		OnRemoveWithReason: nil,
+	}
+
+	//callback func config
+	basemodel0 := BaseModel{}
+	SampleCallBackFuncMap["recall"] = basemodel0.GetInferExampleFeaturesNotContainItems
+	SampleCallBackFuncMap["rank"] = basemodel0.GetInferExampleFeaturesContainItems
 }
 
 // singleton instance
@@ -47,7 +85,6 @@ func GetBaseModelInstance() *BaseModel {
 	return baseModelInstance
 }
 
-// modelname
 // userid
 func (b *BaseModel) SetModelName(modelName string) {
 	b.modelName = modelName
@@ -66,10 +103,10 @@ func (b *BaseModel) GetServiceConfig() *config_loader.ServiceConfig {
 	return b.serviceConfig
 }
 
-func (b *BaseModel) GetInferExampleFeatures() (internal.ExampleFeatures, error) {
-	panic("please overwrite in extend models. ")
+// func (b *BaseModel) GetInferExampleFeatures() (internal.ExampleFeatures, error) {
+// 	panic("please overwrite in extend models. ")
 
-}
+// }
 
 func (b *BaseModel) SetUserBloomFilter(filter *bloom.BloomFilter) {
 	b.userBloomFilter = filter
@@ -94,8 +131,156 @@ func (b *BaseModel) notify(sub Subject) {
 	b.SetItemBloomFilter(internal.GetItemBloomFilterInstance())
 }
 
+// Each model may have multiple ways to create samples, using callback functions to determine which method to call
+func (d *BaseModel) GetInferExampleFeaturesNotContainItems(userId string, itemList []string) (internal.ExampleFeatures, error) {
+	cacheKeyPrefix := userId + d.serviceConfig.GetServiceId() + d.modelName + "_samples"
+
+	//init examples
+	userExampleFeatures := &internal.SeqExampleBuff{}
+	userContextExampleFeatures := &internal.SeqExampleBuff{}
+	exampleData := internal.ExampleFeatures{
+		UserExampleFeatures:        userExampleFeatures,
+		UserContextExampleFeatures: userContextExampleFeatures,
+	}
+
+	//set cache
+	bigCache, err := bigcache.NewBigCache(bigCacheConfBaseModel)
+	if err != nil {
+		logs.Error(err)
+	}
+
+	// if hit cacha.
+	if lifeWindowS > 0 {
+
+		//INFO:MMO, go-cache can't set MaxCacheSize. change to use bigcache.
+
+		// if cacheData, ok := goCache.Get(cacheKeyPrefix); ok {
+		// 	return cacheData.(ExampleFeatures), nil
+		// }
+
+		exampleDataBytes, _ := bigCache.Get(cacheKeyPrefix)
+		err = json.Unmarshal(exampleDataBytes, &exampleData)
+		if err != nil {
+			logs.Error(err)
+		}
+		return exampleData, nil
+
+	}
+
+	// if not hit cache, get features from redis and request.
+	userExampleFeatures, err = d.getUserExampleFeatures(userId)
+	if err != nil {
+		logs.Error(err)
+		return exampleData, err
+	}
+	userContextExampleFeatures, err = d.getUserContextExampleFeatures(userId)
+	if err != nil {
+		logs.Error(err)
+		return exampleData, err
+	}
+
+	exampleData = internal.ExampleFeatures{
+		UserExampleFeatures:        userExampleFeatures,
+		UserContextExampleFeatures: userContextExampleFeatures,
+	}
+
+	if lifeWindowS > 0 {
+		// goCache.Set(cacheKeyPrefix, &exampleData, cacheTimeSecond)
+		bigCache.Set(cacheKeyPrefix, []byte(utils.ConvertStructToJson(exampleData)))
+	}
+
+	return exampleData, nil
+}
+
+// Each model may have multiple ways to create samples, using callback functions to determine which method to call
+func (d *BaseModel) GetInferExampleFeaturesContainItems(userId string, itemList []string) (internal.ExampleFeatures, error) {
+	cacheKeyPrefix := userId + d.serviceConfig.GetServiceId() + d.GetModelName() + "_samples"
+
+	//init examples
+	userExampleFeatures := &internal.SeqExampleBuff{}
+	userContextExampleFeatures := &internal.SeqExampleBuff{}
+	itemExampleFeaturesList := make([]internal.SeqExampleBuff, 0)
+	exampleData := internal.ExampleFeatures{
+		UserExampleFeatures:        userExampleFeatures,
+		UserContextExampleFeatures: userContextExampleFeatures,
+		ItemSeqExampleFeatures:     &itemExampleFeaturesList,
+	}
+
+	//set cache
+	bigCache, err := bigcache.NewBigCache(bigCacheConfBaseModel)
+	if err != nil {
+		return exampleData, err
+	}
+
+	// if hit cache.
+	if lifeWindowS > 0 {
+		exampleDataBytes, _ := bigCache.Get(cacheKeyPrefix)
+		err = json.Unmarshal(exampleDataBytes, &exampleData)
+		if err != nil {
+			return exampleData, err
+		}
+		return exampleData, nil
+
+	}
+
+	// if not hit cache, get features from redis and request.
+	userExampleFeatures, err = d.getUserExampleFeatures(userId)
+	if err != nil {
+		return exampleData, err
+	}
+	userContextExampleFeatures, err = d.getUserContextExampleFeatures(userId)
+	if err != nil {
+		return exampleData, err
+	}
+
+	//get items features.
+	itemExampleFeaturesTmp, err := d.getItemExamplesFeatures(itemList)
+	if err != nil {
+		return exampleData, err
+	}
+
+	itemExampleFeaturesList = *itemExampleFeaturesTmp
+	exampleData = internal.ExampleFeatures{
+		UserExampleFeatures:        userExampleFeatures,
+		UserContextExampleFeatures: userContextExampleFeatures,
+		ItemSeqExampleFeatures:     &itemExampleFeaturesList,
+	}
+
+	if lifeWindowS > 0 {
+		bigCache.Set(cacheKeyPrefix, []byte(utils.ConvertStructToJson(exampleData)))
+	}
+
+	return exampleData, nil
+}
+
+func (d *BaseModel) getItemExamplesFeatures(itemList []string) (*[]internal.SeqExampleBuff, error) {
+	//TODO: use bloom filter check items, avoid all items search redis.
+	redisKeyPrefix := d.serviceConfig.GetModelConfig().GetItemRedisKeyPre()
+	itemSeqExampleBuffs := make([]internal.SeqExampleBuff, 0)
+	for _, itemId := range itemList {
+		redisKey := redisKeyPrefix + itemId
+		if d.GetItemBloomFilter().Test([]byte(itemId)) {
+			userExampleFeats, err := d.serviceConfig.GetRedisConfig().GetRedisPool().Get(redisKey)
+			itemExampleFeatsBuff := make([]byte, 0)
+			if err != nil {
+				return &itemSeqExampleBuffs, nil
+			} else {
+				itemExampleFeatsBuff = []byte(userExampleFeats)
+			}
+
+			itemSeqExampleBuff := internal.SeqExampleBuff{
+				Key:  &itemId,
+				Buff: &itemExampleFeatsBuff,
+			}
+			itemSeqExampleBuffs = append(itemSeqExampleBuffs, itemSeqExampleBuff)
+		}
+	}
+
+	return &itemSeqExampleBuffs, nil
+}
+
 // get user tfrecords offline samples
-func (b *BaseModel) GetUserExampleFeatures(userId string) (*internal.SeqExampleBuff, error) {
+func (b *BaseModel) getUserExampleFeatures(userId string) (*internal.SeqExampleBuff, error) {
 	//INFO: use bloom filter check users, avoid all users search redis.
 
 	userSeqExampleBuff := internal.SeqExampleBuff{}
@@ -122,7 +307,7 @@ func (b *BaseModel) GetUserExampleFeatures(userId string) (*internal.SeqExampleB
 }
 
 // get user tfrecords online samples
-func (b *BaseModel) GetUserContextExampleFeatures(userId string) (*internal.SeqExampleBuff, error) {
+func (b *BaseModel) getUserContextExampleFeatures(userId string) (*internal.SeqExampleBuff, error) {
 	//TODO: use bloom filter check users, avoid all users search redis.
 	userContextSeqExampleBuff := internal.SeqExampleBuff{}
 	userContextExampleFeatsBuff := make([]byte, 0)

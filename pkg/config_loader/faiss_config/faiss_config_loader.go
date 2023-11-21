@@ -13,6 +13,7 @@ type FaissIndexConfig struct {
 	indexName     string                     `validate:"required,unique,min=4,max=10"` //index name.
 	faissGrpcPool *internal.GRPCPool         `validate:"required"`                     //faiss  grpc pool.
 	faissIndexs   *faiss_index.RecallRequest `validate:"required"`                     // faiss index.
+	recallNum     int                        `validate:"required"`                     // faiss recall num.
 }
 
 // index name
@@ -40,6 +41,15 @@ func (f *FaissIndexConfig) setFaissIndexs(faissIndexs *faiss_index.RecallRequest
 
 func (f *FaissIndexConfig) GetFaissIndexs() *faiss_index.RecallRequest {
 	return f.faissIndexs
+}
+
+// recall num
+func (f *FaissIndexConfig) SetRecallNum(recallNum int) {
+	f.recallNum = recallNum
+}
+
+func (f *FaissIndexConfig) GetRecallNum() int {
+	return f.recallNum
 }
 
 // @implement ConfigLoadInterface

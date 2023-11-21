@@ -24,7 +24,8 @@ var verbose bool
 var shards int
 
 type DeepFM struct {
-	basemodel.BaseModel // extend baseModel
+	basemodel basemodel.BaseModel // extend baseModel
+	modelType string
 }
 
 func init() {
@@ -47,10 +48,23 @@ func init() {
 	}
 }
 
-func (d *DeepFM) ModelInferSkywalking(requestId string, userId string, itemList []string, r *http.Request) (map[string]interface{}, error) {
+func (d *DeepFM) SetBaseModel(basemodel basemodel.BaseModel) {
+	d.basemodel = basemodel
+}
+
+// modeltype
+func (d *DeepFM) SetModelType(modelType string) {
+	d.modelType = modelType
+}
+
+func (d *DeepFM) GetModelType() string {
+	return d.modelType
+}
+
+func (d *DeepFM) ModelInferSkywalking(requestId string, userId string, itemList []string, r *http.Request, createSample basemodel.CreateSampleCallBackFunc) (map[string]interface{}, error) {
 	response := make(map[string]interface{}, 0)
 	tensorName := "scores"
-	cacheKeyPrefix := userId + d.BaseModel.GetServiceConfig().GetServiceId() + d.BaseModel.GetModelName()
+	cacheKeyPrefix := userId + d.basemodel.GetServiceConfig().GetServiceId() + d.basemodel.GetModelName()
 
 	//set cache
 	bigCache, err := bigcache.NewBigCache(bigCacheConfDeepfm)
@@ -75,7 +89,7 @@ func (d *DeepFM) ModelInferSkywalking(requestId string, userId string, itemList 
 	}
 	spanUnionEmFv.SetOperationName("get rank infer examples func")
 	spanUnionEmFv.Log(time.Now())
-	examples, err := d.GetInferExampleFeatures(userId, itemList)
+	examples, err := createSample(userId, itemList) //create sample by callback func
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +105,7 @@ func (d *DeepFM) ModelInferSkywalking(requestId string, userId string, itemList 
 	}
 	spanUnionEmFv.SetOperationName("get rank scores func")
 	spanUnionEmFv.Log(time.Now())
-	items, scores, err := d.rankPredict(examples, tensorName) // d.getServiceConfig().GetModelConfig().rankPredict(examples, tensorName)
+	items, scores, err := d.rankPredict(examples, tensorName)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +130,7 @@ func (d *DeepFM) ModelInferSkywalking(requestId string, userId string, itemList 
 	}
 	spanUnionEmOut.SetOperationName("get rank result func")
 	spanUnionEmOut.Log(time.Now())
-	rankRst, err := d.BaseModel.InferResultFormat(&rankResult)
+	rankRst, err := d.basemodel.InferResultFormat(&rankResult)
 	if err != nil {
 		return nil, err
 	}
@@ -133,10 +147,10 @@ func (d *DeepFM) ModelInferSkywalking(requestId string, userId string, itemList 
 	return response, nil
 }
 
-func (d *DeepFM) ModelInferNoSkywalking(requestId string, userId string, itemList []string, r *http.Request) (map[string]interface{}, error) {
+func (d *DeepFM) ModelInferNoSkywalking(requestId string, userId string, itemList []string, r *http.Request, createSample basemodel.CreateSampleCallBackFunc) (map[string]interface{}, error) {
 	response := make(map[string]interface{}, 0)
 	tensorName := "scores"
-	cacheKeyPrefix := userId + d.BaseModel.GetServiceConfig().GetServiceId() + d.BaseModel.GetModelName()
+	cacheKeyPrefix := userId + d.basemodel.GetServiceConfig().GetServiceId() + d.basemodel.GetModelName()
 
 	//set cache
 	bigCache, err := bigcache.NewBigCache(bigCacheConfDeepfm)
@@ -157,7 +171,7 @@ func (d *DeepFM) ModelInferNoSkywalking(requestId string, userId string, itemLis
 	}
 
 	//get infer samples.
-	examples, err := d.GetInferExampleFeatures(userId, itemList)
+	examples, err := createSample(userId, itemList) //create sample by callback func
 	if err != nil {
 		logs.Error(requestId, time.Now(), err)
 		return nil, err
@@ -166,7 +180,7 @@ func (d *DeepFM) ModelInferNoSkywalking(requestId string, userId string, itemLis
 
 	// get rank scores from tfserving model.
 	rankResult := make([]*faiss_index.ItemInfo, 0)
-	items, scores, err := d.rankPredict(examples, tensorName) //d.getServiceConfig().GetModelConfig().rankPredict(examples, tensorName)
+	items, scores, err := d.rankPredict(examples, tensorName)
 	if err != nil {
 		logs.Error(requestId, time.Now(), err)
 		return nil, err
@@ -184,7 +198,7 @@ func (d *DeepFM) ModelInferNoSkywalking(requestId string, userId string, itemLis
 	logs.Debug(requestId, time.Now(), "rank result:", examples)
 
 	//format result.
-	rankRst, err := d.BaseModel.InferResultFormat(&rankResult)
+	rankRst, err := d.basemodel.InferResultFormat(&rankResult)
 	if err != nil {
 		logs.Error(requestId, time.Now(), err)
 		return nil, err
@@ -214,98 +228,11 @@ func (d *DeepFM) rankPredict(examples internal.ExampleFeatures, tensorName strin
 		items = append(items, *(itemExample.Key))
 		itemExamples = append(itemExamples, *(itemExample.Buff))
 	}
-	scores, err := d.BaseModel.RequestTfservering(&userExamples, &userContextExamples, &itemExamples, tensorName)
+	scores, err := d.basemodel.RequestTfservering(&userExamples, &userContextExamples, &itemExamples, tensorName)
 
 	if err != nil {
 		return nil, nil, err
 	}
 
 	return &items, scores, nil
-}
-
-// @overwirte
-func (d *DeepFM) GetInferExampleFeatures(userId string, itemList []string) (internal.ExampleFeatures, error) {
-	cacheKeyPrefix := userId + d.BaseModel.GetServiceConfig().GetServiceId() + d.BaseModel.GetModelName() + "_samples"
-
-	//init examples
-	userExampleFeatures := &internal.SeqExampleBuff{}
-	userContextExampleFeatures := &internal.SeqExampleBuff{}
-	itemExampleFeaturesList := make([]internal.SeqExampleBuff, 0)
-	exampleData := internal.ExampleFeatures{
-		UserExampleFeatures:        userExampleFeatures,
-		UserContextExampleFeatures: userContextExampleFeatures,
-		ItemSeqExampleFeatures:     &itemExampleFeaturesList,
-	}
-
-	//set cache
-	bigCache, err := bigcache.NewBigCache(bigCacheConfDeepfm)
-	if err != nil {
-		return exampleData, err
-	}
-
-	// if hit cache.
-	if lifeWindowS > 0 {
-		exampleDataBytes, _ := bigCache.Get(cacheKeyPrefix)
-		err = json.Unmarshal(exampleDataBytes, &exampleData)
-		if err != nil {
-			return exampleData, err
-		}
-		return exampleData, nil
-
-	}
-
-	// if not hit cache, get features from redis and request.
-	userExampleFeatures, err = d.BaseModel.GetUserExampleFeatures(userId)
-	if err != nil {
-		return exampleData, err
-	}
-	userContextExampleFeatures, err = d.BaseModel.GetUserContextExampleFeatures(userId)
-	if err != nil {
-		return exampleData, err
-	}
-
-	//get items features.
-	itemExampleFeaturesTmp, err := d.getItemExamplesFeatures(itemList)
-	if err != nil {
-		return exampleData, err
-	}
-
-	itemExampleFeaturesList = *itemExampleFeaturesTmp
-	exampleData = internal.ExampleFeatures{
-		UserExampleFeatures:        userExampleFeatures,
-		UserContextExampleFeatures: userContextExampleFeatures,
-		ItemSeqExampleFeatures:     &itemExampleFeaturesList,
-	}
-
-	if lifeWindowS > 0 {
-		bigCache.Set(cacheKeyPrefix, []byte(utils.ConvertStructToJson(exampleData)))
-	}
-
-	return exampleData, nil
-}
-
-func (d *DeepFM) getItemExamplesFeatures(itemList []string) (*[]internal.SeqExampleBuff, error) {
-	//TODO: use bloom filter check items, avoid all items search redis.
-	redisKeyPrefix := d.BaseModel.GetServiceConfig().GetModelConfig().GetItemRedisKeyPre()
-	itemSeqExampleBuffs := make([]internal.SeqExampleBuff, 0)
-	for _, itemId := range itemList {
-		redisKey := redisKeyPrefix + itemId
-		if d.BaseModel.GetItemBloomFilter().Test([]byte(itemId)) {
-			userExampleFeats, err := d.BaseModel.GetServiceConfig().GetRedisConfig().GetRedisPool().Get(redisKey)
-			itemExampleFeatsBuff := make([]byte, 0)
-			if err != nil {
-				return &itemSeqExampleBuffs, nil
-			} else {
-				itemExampleFeatsBuff = []byte(userExampleFeats)
-			}
-
-			itemSeqExampleBuff := internal.SeqExampleBuff{
-				Key:  &itemId,
-				Buff: &itemExampleFeatsBuff,
-			}
-			itemSeqExampleBuffs = append(itemSeqExampleBuffs, itemSeqExampleBuff)
-		}
-	}
-
-	return &itemSeqExampleBuffs, nil
 }
