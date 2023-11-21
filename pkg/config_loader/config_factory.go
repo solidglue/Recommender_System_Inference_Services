@@ -15,11 +15,11 @@ type ConfigFactory struct {
 }
 
 // faiss config factory
-func (f *ConfigFactory) createFaissConfig(dataId string, indexConfStr string) *faiss_config.FaissIndexConfig {
-	faissConfig := new(faiss_config.FaissIndexConfig)
-	faissConfig.ConfigLoad(dataId, indexConfStr)
+func (f *ConfigFactory) createFaissConfig(dataId string, indexConfStr string) *faiss_config.FaissIndexConfigs {
+	faissConfigs := new(faiss_config.FaissIndexConfigs)
+	faissConfigs.ConfigLoad(dataId, indexConfStr)
 
-	return faissConfig
+	return faissConfigs
 }
 
 // model config factory

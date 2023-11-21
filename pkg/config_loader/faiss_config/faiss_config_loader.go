@@ -9,6 +9,18 @@ import (
 	"strconv"
 )
 
+type FaissIndexConfigs struct {
+	faissIndexConfigs []FaissIndexConfig
+}
+
+func (f *FaissIndexConfigs) SetFaissIndexConfig(faissIndexConfigs []FaissIndexConfig) {
+	f.faissIndexConfigs = faissIndexConfigs
+}
+
+func (f *FaissIndexConfigs) GetFaissIndexConfig() []FaissIndexConfig {
+	return f.faissIndexConfigs
+}
+
 type FaissIndexConfig struct {
 	indexName     string                     `validate:"required,unique,min=4,max=10"` //index name.
 	faissGrpcPool *internal.GRPCPool         `validate:"required"`                     //faiss  grpc pool.
@@ -53,9 +65,10 @@ func (f *FaissIndexConfig) GetRecallNum() int {
 }
 
 // @implement ConfigLoadInterface
-func (f *FaissIndexConfig) ConfigLoad(dataId string, indexConfStr string) error {
+func (f *FaissIndexConfigs) ConfigLoad(dataId string, indexConfStr string) error {
 	dataConf := utils.ConvertJsonToStruct(indexConfStr)
 
+	faissIndexConfigs := make([]FaissIndexConfig, 0)
 	// create faiss grpc pool
 	faissGrpcConf := dataConf["faissGrpcAddr"].(map[string]interface{})
 	faissGrpcPool, err := internal.CreateGrpcConn(faissGrpcConf)
@@ -64,10 +77,12 @@ func (f *FaissIndexConfig) ConfigLoad(dataId string, indexConfStr string) error 
 	}
 
 	//INFO:the recallNum param from http request,maybe int/ float /string。 user reflect to convert to int32.
+	//INFO:Processing multiple recalls simultaneously to save network overhead
 	recallNum := int32(100)
-	indexInfo := dataConf["indexInfo"].(map[string]interface{})
-	for indexName, tmpIndexConf := range indexInfo { //only 1 index
+	indexInfo := dataConf["indexInfo"].([]interface{})
+	for _, tmpIndexConf := range indexInfo {
 		tmpIndexConfMap := tmpIndexConf.(map[string]interface{})
+		faissIndexConfig := FaissIndexConfig{}
 
 		//recallNum := int32(tmpIndexConfMap["recall_num"].(float64))
 		recallNumType := reflect.TypeOf(tmpIndexConfMap["recallNum"])
@@ -90,15 +105,18 @@ func (f *FaissIndexConfig) ConfigLoad(dataId string, indexConfStr string) error 
 			logs.Warn("unkown type, set recallnum to 100")
 		}
 
-		indexName_ := tmpIndexConfMap["index_name"].(string)
+		indexName_ := tmpIndexConfMap["indexName"].(string)
 		indexInfoStruct := &faiss_index.RecallRequest{
 			IndexName: indexName_,
 			RecallNum: recallNum,
 		}
 
-		f.setIndexName(indexName)
-		f.setFaissGrpcPool(faissGrpcPool)
-		f.setFaissIndexs(indexInfoStruct)
+		faissIndexConfig.setIndexName(indexName_)
+		faissIndexConfig.setFaissGrpcPool(faissGrpcPool)
+		faissIndexConfig.setFaissIndexs(indexInfoStruct)
+		faissIndexConfigs = append(faissIndexConfigs, faissIndexConfig)
+
+		f.SetFaissIndexConfig(faissIndexConfigs)
 	}
 
 	return nil

@@ -367,8 +367,7 @@ func (b *BaseModel) RequestTfservering(userExamples *[][]byte, userContextExampl
 	if err != nil {
 		return nil, err
 	}
-
-	predictConfig := tfserving.NewPredictionServiceClient(grpcConn)
+	predictClient := tfserving.NewPredictionServiceClient(grpcConn)
 	version := &types.Int64Value{Value: tfservingModelVersion}
 	predictRequest := &tfserving.PredictRequest{
 		ModelSpec: &tfserving.ModelSpec{
@@ -428,7 +427,7 @@ func (b *BaseModel) RequestTfservering(userExamples *[][]byte, userContextExampl
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(tfservingTimeout)*time.Millisecond)
 	defer cancel()
 
-	predict, err := predictConfig.Predict(ctx, predictRequest)
+	predict, err := predictClient.Predict(ctx, predictRequest)
 	if err != nil {
 		return nil, err
 	}

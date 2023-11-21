@@ -5,11 +5,13 @@ import (
 	"infer-microservices/internal"
 	faiss_index "infer-microservices/internal/faiss_gogofaster"
 	"infer-microservices/internal/flags"
+	"infer-microservices/pkg/config_loader/faiss_config"
 	"infer-microservices/pkg/faiss"
 	"infer-microservices/pkg/logs"
 	"infer-microservices/pkg/model/basemodel"
 	"infer-microservices/pkg/utils"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/allegro/bigcache"
@@ -23,6 +25,7 @@ var maxEntrySize int
 var maxEntriesInWindow int
 var verbose bool
 var shards int
+var wg sync.WaitGroup
 
 type Dssm struct {
 	basemodel basemodel.BaseModel // extend baseModel
@@ -127,23 +130,31 @@ func (d *Dssm) ModelInferSkywalking(requestId string, userId string, itemList []
 	spanUnionEmFv.End()
 	logs.Debug(requestId, time.Now(), "embeddingVector:", embeddingVector)
 
-	//request faiss index
-	recallResult := make([]*faiss_index.ItemInfo, 0)
-	spanUnionEmFr, _, err1 := internal.Tracer.CreateLocalSpan(r.Context())
-	if err1 != nil {
-		logs.Error(requestId, time.Now(), err)
-		return nil, err1
+	//Asynchronous RPC request, simultaneous processing of multiple recalls, reduce network cost
+	mergeResult := make([]*faiss_index.ItemInfo, 0)
+	faissIndexConfigs := d.basemodel.GetServiceConfig().GetFaissIndexConfigs()
+	recallCh := make(chan []*faiss_index.ItemInfo, 100)
+	for _, faissIndexConfig := range faissIndexConfigs.GetFaissIndexConfig() {
+		wg.Add(1)
+		go func(faissIndexConfig *faiss_config.FaissIndexConfig) {
+			defer wg.Done()
+			recallResult, err := faiss.FaissVectorSearch(faissIndexConfig, examples, *embeddingVector)
+			if err != nil {
+				logs.Error(err)
+			}
+			logs.Debug(requestId, time.Now(), "recall result:", recallResult)
+			recallCh <- recallResult
+		}(&faissIndexConfig)
 	}
-	spanUnionEmFr.SetOperationName("get recall faiss index func")
-	spanUnionEmFr.Log(time.Now())
-	recallResult, err = faiss.FaissVectorSearch(d.basemodel.GetServiceConfig().GetFaissIndexConfig(), examples, *embeddingVector)
-	if err != nil {
-		logs.Error(err)
-		return nil, err
+
+	wg.Wait()
+	for idx := 0; idx < len(recallCh); idx++ {
+		recallCellTmp := <-recallCh
+		for _, item := range recallCellTmp {
+			mergeResult = append(mergeResult, item)
+		}
 	}
-	spanUnionEmFr.Log(time.Now())
-	spanUnionEmFr.End()
-	logs.Debug(requestId, time.Now(), "recall result:", recallResult)
+	close(recallCh)
 
 	//format result.
 	spanUnionEmOut, _, err := internal.Tracer.CreateLocalSpan(r.Context())
@@ -153,7 +164,7 @@ func (d *Dssm) ModelInferSkywalking(requestId string, userId string, itemList []
 	spanUnionEmOut.SetOperationName("get recall result func")
 
 	spanUnionEmOut.Log(time.Now())
-	recallRst, err := d.basemodel.InferResultFormat(&recallResult)
+	recallRst, err := d.basemodel.InferResultFormat(&mergeResult)
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +176,7 @@ func (d *Dssm) ModelInferSkywalking(requestId string, userId string, itemList []
 		return nil, err
 	}
 	response["data"] = *recallRst
-	logs.Debug(requestId, time.Now(), "format result:", recallResult)
+	logs.Debug(requestId, time.Now(), "format result:", mergeResult)
 
 	if lifeWindowS > 0 {
 		bigCache.Set(cacheKeyPrefix, []byte(utils.ConvertStructToJson(response)))
@@ -208,16 +219,34 @@ func (d *Dssm) ModelInferNoSkywalking(requestId string, userId string, itemList 
 	}
 	logs.Debug(requestId, time.Now(), "embeddingVector:", embeddingVector)
 
-	//request faiss index
-	recallResult := make([]*faiss_index.ItemInfo, 0)
-	recallResult, err = faiss.FaissVectorSearch(d.basemodel.GetServiceConfig().GetFaissIndexConfig(), examples, *embeddingVector)
-	if err != nil {
-		return nil, err
+	//Asynchronous RPC request, simultaneous processing of multiple recalls, reduce network cost
+	mergeResult := make([]*faiss_index.ItemInfo, 0)
+	faissIndexConfigs := d.basemodel.GetServiceConfig().GetFaissIndexConfigs()
+	recallCh := make(chan []*faiss_index.ItemInfo, 100)
+	for _, faissIndexConfig := range faissIndexConfigs.GetFaissIndexConfig() {
+		wg.Add(1)
+		go func(faissIndexConfig *faiss_config.FaissIndexConfig) {
+			defer wg.Done()
+			recallResult, err := faiss.FaissVectorSearch(faissIndexConfig, examples, *embeddingVector)
+			if err != nil {
+				logs.Error(err)
+			}
+			logs.Debug(requestId, time.Now(), "recall result:", recallResult)
+			recallCh <- recallResult
+		}(&faissIndexConfig)
 	}
-	logs.Debug(requestId, time.Now(), "recall result:", recallResult)
+
+	wg.Wait()
+	for idx := 0; idx < len(recallCh); idx++ {
+		recallCellTmp := <-recallCh
+		for _, item := range recallCellTmp {
+			mergeResult = append(mergeResult, item)
+		}
+	}
+	close(recallCh)
 
 	//format result.
-	recallRst, err := d.basemodel.InferResultFormat(&recallResult)
+	recallRst, err := d.basemodel.InferResultFormat(&mergeResult)
 	if err != nil {
 		return nil, err
 	}
@@ -227,7 +256,7 @@ func (d *Dssm) ModelInferNoSkywalking(requestId string, userId string, itemList 
 		return nil, err
 	}
 	response["data"] = *recallRst
-	logs.Debug(requestId, time.Now(), "format result:", recallResult)
+	logs.Debug(requestId, time.Now(), "format result:", mergeResult)
 
 	if lifeWindowS > 0 {
 		bigCache.Set(cacheKeyPrefix, []byte(utils.ConvertStructToJson(response)))

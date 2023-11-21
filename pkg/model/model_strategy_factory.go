@@ -36,7 +36,6 @@ func (m *ModelStrategyFactory) CreateModelStrategy(modelName string, serverConn 
 	//dssm model
 	dssmModel := &dssm.Dssm{}
 	dssmModel.SetBaseModel(*baseModel)
-	dssmModel.SetRetNum(serverConn.GetFaissIndexConfig().GetRecallNum())
 	dssmModel.SetModelType("recall")
 	modelStrategyMap["dssm"] = dssmModel
 

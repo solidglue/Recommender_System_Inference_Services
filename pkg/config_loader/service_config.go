@@ -9,10 +9,10 @@ import (
 var ServiceConfigs = make(map[string]*ServiceConfig, 0) //one server/dataid,one service conn
 
 type ServiceConfig struct {
-	serviceId        string                        `validate:"required,unique,min=4,max=10"` //dataid
-	redisConfig      redis_config.RedisConfig      `validate:"required"`                     //redis conn info
-	faissIndexConfig faiss_config.FaissIndexConfig //index conn info
-	modelConfig      model_config.ModelConfig      `validate:"required"` //model conn info
+	serviceId         string                         `validate:"required,unique,min=4,max=10"` //dataid
+	redisConfig       redis_config.RedisConfig       `validate:"required"`                     //redis conn info
+	faissIndexConfigs faiss_config.FaissIndexConfigs //index conn info
+	modelConfig       model_config.ModelConfig       `validate:"required"` //model conn info
 }
 
 func init() {
@@ -37,12 +37,12 @@ func (s *ServiceConfig) GetRedisConfig() *redis_config.RedisConfig {
 }
 
 // faissIndexConfig
-func (s *ServiceConfig) setFaissIndexConfig(faissIndexConfig faiss_config.FaissIndexConfig) {
-	s.faissIndexConfig = faissIndexConfig
+func (s *ServiceConfig) SetFaissIndexConfigs(faissIndexConfigs faiss_config.FaissIndexConfigs) {
+	s.faissIndexConfigs = faissIndexConfigs
 }
 
-func (s *ServiceConfig) GetFaissIndexConfig() *faiss_config.FaissIndexConfig {
-	return &s.faissIndexConfig
+func (s *ServiceConfig) GetFaissIndexConfigs() *faiss_config.FaissIndexConfigs {
+	return &s.faissIndexConfigs
 }
 
 // modelConfig

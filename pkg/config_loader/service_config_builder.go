@@ -25,8 +25,8 @@ func (b *ServiceConfigBuilder) RedisConfigBuilder(dataId string, redisConfStr st
 // faiss builder
 func (b *ServiceConfigBuilder) FaissConfigBuilder(dataId string, indexConfStr string) *ServiceConfigBuilder {
 	configFactory := &ConfigFactory{}
-	faissConfig := configFactory.createFaissConfig(dataId, indexConfStr)
-	b.serviceConfig.setFaissIndexConfig(*faissConfig)
+	faissConfigs := configFactory.createFaissConfig(dataId, indexConfStr)
+	b.serviceConfig.SetFaissIndexConfigs(*faissConfigs)
 
 	return b
 }

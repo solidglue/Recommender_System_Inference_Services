@@ -25,16 +25,19 @@ func TestFaissConfigLoader(t *testing.T) {
 		},
 	}
 	`
-	faissConf := FaissIndexConfig{}
-	faissConf.ConfigLoad("testId", faissTestStr)
+	faissConfs := FaissIndexConfigs{}
+	faissConfs.ConfigLoad("testId", faissTestStr)
 
-	t.Log("faissConf:", faissConf)
+	t.Log("faissConf:", faissConfs)
 
-	if faissConf.faissIndexs.RecallNum <= 0 {
-		t.Errorf("recall num must > 0")
+	for _, faissConf := range faissConfs.faissIndexConfigs {
+		if faissConf.faissIndexs.RecallNum <= 0 {
+			t.Errorf("recall num must > 0")
+		}
+
+		if faissConf.faissIndexs.IndexName == "" {
+			t.Errorf("index name cant be empt")
+		}
 	}
 
-	if faissConf.faissIndexs.IndexName == "" {
-		t.Errorf("index name cant be empt")
-	}
 }
