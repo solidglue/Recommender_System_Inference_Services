@@ -38,8 +38,15 @@ func (s *HttpService) GetRequest() *http.Request {
 	return s.request
 }
 
+// sync server
+func (s *HttpService) SyncRecommenderInfer(w http.ResponseWriter, r *http.Request) {
+	respCh := make(chan []byte, 10000)
+	go s.RecommenderInfer(w, r, respCh)
+	w.Write(<-respCh)
+}
+
 // infer
-func (s *HttpService) RecommenderInfer(w http.ResponseWriter, r *http.Request) {
+func (s *HttpService) RecommenderInfer(w http.ResponseWriter, r *http.Request, ch chan<- []byte) {
 	defer func() {
 		if info := recover(); info != nil {
 			logs.Fatal("panic", info)
@@ -103,7 +110,9 @@ func (s *HttpService) RecommenderInfer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	buff, _ := jsoniter.Marshal(rsp)
-	w.Write(buff)
+	//w.Write(buff)
+
+	ch <- buff
 }
 
 func (s *HttpService) Check(requestId string) bool {

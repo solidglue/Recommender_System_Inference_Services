@@ -56,27 +56,44 @@ func (s *DubboService) RecommenderInfer(ctx context.Context, in *io.RecRequest) 
 	ctx, cancelFunc := context.WithTimeout(ctx, time.Millisecond*100)
 	defer cancelFunc()
 
-	respCh := make(chan *io.RecResponse, 100)
+	respCh := make(chan *io.RecResponse, 10000)
 	go s.recommenderInferContext(ctx, in, respCh)
 
-	for {
-		select {
-		case <-ctx.Done():
-			switch ctx.Err() {
-			case context.DeadlineExceeded:
-				logs.Warn(requestId, time.Now(), "context timeout DeadlineExceeded.")
-				return response, ctx.Err()
-			case context.Canceled:
-				logs.Warn(requestId, time.Now(), "context timeout Canceled.")
-				return response, ctx.Err()
-			}
-		case responseCh := <-respCh:
-			response = responseCh
-			logs.Info(requestId, time.Now(), "response:", response)
+	// for {
+	// 	select {
+	// 	case <-ctx.Done():
+	// 		switch ctx.Err() {
+	// 		case context.DeadlineExceeded:
+	// 			logs.Warn(requestId, time.Now(), "context timeout DeadlineExceeded.")
+	// 			return response, ctx.Err()
+	// 		case context.Canceled:
+	// 			logs.Warn(requestId, time.Now(), "context timeout Canceled.")
+	// 			return response, ctx.Err()
+	// 		}
+	// 	case responseCh := <-respCh:
+	// 		response = responseCh
+	// 		logs.Info(requestId, time.Now(), "response:", response)
 
-			return response, nil
+	// 		return response, nil
+	// 	}
+	// }
+
+	select {
+	case <-ctx.Done():
+		switch ctx.Err() {
+		case context.DeadlineExceeded:
+			logs.Warn(requestId, time.Now(), "context timeout DeadlineExceeded.")
+			return response, ctx.Err()
+		case context.Canceled:
+			logs.Warn(requestId, time.Now(), "context timeout Canceled.")
+			return response, ctx.Err()
 		}
+	case responseCh := <-respCh:
+		response = responseCh
+		logs.Info(requestId, time.Now(), "response:", response)
 	}
+
+	return response, nil
 }
 
 func (s *DubboService) recommenderInferContext(ctx context.Context, in *io.RecRequest, respCh chan *io.RecResponse) {

@@ -101,7 +101,7 @@ func (s *HttpServiceApi) ServiceStart() {
 	}
 
 	InferFuncs := []InferFunc{
-		internal.AuthHandler, s.httpService.RecommenderInfer,
+		internal.AuthHandler, s.httpService.SyncRecommenderInfer,
 	}
 
 	if s.httpService.GetBaseService().GetSkywalkingWeatherOpen() {
