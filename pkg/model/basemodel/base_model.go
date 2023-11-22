@@ -13,7 +13,6 @@ import (
 	config_loader "infer-microservices/pkg/config_loader"
 	"infer-microservices/pkg/logs"
 	"infer-microservices/pkg/utils"
-	"sync"
 	"time"
 
 	"github.com/allegro/bigcache"
@@ -22,7 +21,6 @@ import (
 	"github.com/gogo/protobuf/types"
 )
 
-var wg sync.WaitGroup
 var tfservingModelVersion int64
 var tfservingTimeout int64
 var baseModelInstance *BaseModel
@@ -291,13 +289,10 @@ func (d *BaseModel) getItemExamplesFeatures(itemList []string, ch chan<- *[]inte
 	//TODO: use bloom filter check items, avoid all items search redis.
 	redisKeyPrefix := d.serviceConfig.GetModelConfig().GetItemRedisKeyPre()
 	itemSeqExampleBuffs := make([]internal.SeqExampleBuff, 0)
-	var itemWg sync.WaitGroup
 	itemsCh := make(chan internal.SeqExampleBuff, 100)
 
 	for _, itemId := range itemList {
-		itemWg.Add(1)
 		go func(itemId string) {
-			defer itemWg.Done()
 			redisKey := redisKeyPrefix + itemId
 			if d.GetItemBloomFilter().Test([]byte(itemId)) {
 				userExampleFeats, err := d.serviceConfig.GetRedisConfig().GetRedisPool().Get(redisKey)
@@ -315,12 +310,19 @@ func (d *BaseModel) getItemExamplesFeatures(itemList []string, ch chan<- *[]inte
 				itemsCh <- itemSeqExampleBuff
 			}
 		}(itemId)
-		wg.Wait()
-		for idx := 0; idx < 100; idx++ {
-			itemSeqExampleBuff := <-itemsCh
-			itemSeqExampleBuffs = append(itemSeqExampleBuffs, itemSeqExampleBuff)
+
+	loop:
+		for {
+			select {
+			case <-time.After(time.Millisecond * 100):
+				break loop
+			case itemCh := <-itemsCh:
+				itemSeqExampleBuff := itemCh
+				itemSeqExampleBuffs = append(itemSeqExampleBuffs, itemSeqExampleBuff)
+			}
 		}
 		close(itemsCh)
+
 	}
 
 	ch <- &itemSeqExampleBuffs
@@ -446,25 +448,28 @@ func (b *BaseModel) RequestTfservering(userExamples *[][]byte, userContextExampl
 
 func (b *BaseModel) InferResultFormat(recallResult *[]*faiss_index.ItemInfo) (*[]map[string]interface{}, error) {
 	recall := make([]map[string]interface{}, 0)
-	recallTmp := make(chan map[string]interface{}, len(*recallResult))
+	resultCh := make(chan map[string]interface{}, len(*recallResult))
 
 	for idx := 0; idx < len(*recallResult); idx++ {
 		rawCell := (*recallResult)[idx]
-		wg.Add(1)
 		go func(raw_cell_ *faiss_index.ItemInfo) {
-			defer wg.Done()
 			returnCell := make(map[string]interface{})
 			returnCell["itemid"] = raw_cell_.ItemId
 			returnCell["score"] = utils.FloatRound(raw_cell_.Score, 4)
-			recallTmp <- returnCell
+			resultCh <- returnCell
 		}(rawCell)
 	}
-	wg.Wait()
-	for idx := 0; idx < len(*recallResult); idx++ {
-		returnCellTmp := <-recallTmp
-		recall = append(recall, returnCellTmp)
+
+loop:
+	for {
+		select {
+		case <-time.After(time.Millisecond * 100):
+			break loop
+		case result := <-resultCh:
+			recall = append(recall, result)
+		}
 	}
-	close(recallTmp)
+	close(resultCh)
 
 	return &recall, nil
 }

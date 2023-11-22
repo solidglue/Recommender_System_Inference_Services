@@ -11,7 +11,6 @@ import (
 	"infer-microservices/pkg/model/basemodel"
 	"infer-microservices/pkg/utils"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/allegro/bigcache"
@@ -25,7 +24,6 @@ var maxEntrySize int
 var maxEntriesInWindow int
 var verbose bool
 var shards int
-var wg sync.WaitGroup
 
 type Dssm struct {
 	basemodel basemodel.BaseModel // extend baseModel
@@ -135,9 +133,7 @@ func (d *Dssm) ModelInferSkywalking(requestId string, userId string, itemList []
 	faissIndexConfigs := d.basemodel.GetServiceConfig().GetFaissIndexConfigs()
 	recallCh := make(chan []*faiss_index.ItemInfo, 100)
 	for _, faissIndexConfig := range faissIndexConfigs.GetFaissIndexConfig() {
-		wg.Add(1)
 		go func(faissIndexConfig *faiss_config.FaissIndexConfig) {
-			defer wg.Done()
 			recallResult, err := faiss.FaissVectorSearch(faissIndexConfig, examples, *embeddingVector)
 			if err != nil {
 				logs.Error(err)
@@ -147,11 +143,15 @@ func (d *Dssm) ModelInferSkywalking(requestId string, userId string, itemList []
 		}(&faissIndexConfig)
 	}
 
-	wg.Wait()
-	for idx := 0; idx < len(recallCh); idx++ {
-		recallCellTmp := <-recallCh
-		for _, item := range recallCellTmp {
-			mergeResult = append(mergeResult, item)
+loop:
+	for {
+		select {
+		case <-time.After(time.Millisecond * 100):
+			break loop
+		case recall := <-recallCh:
+			for _, item := range recall {
+				mergeResult = append(mergeResult, item)
+			}
 		}
 	}
 	close(recallCh)
@@ -224,9 +224,7 @@ func (d *Dssm) ModelInferNoSkywalking(requestId string, userId string, itemList 
 	faissIndexConfigs := d.basemodel.GetServiceConfig().GetFaissIndexConfigs()
 	recallCh := make(chan []*faiss_index.ItemInfo, 100)
 	for _, faissIndexConfig := range faissIndexConfigs.GetFaissIndexConfig() {
-		wg.Add(1)
 		go func(faissIndexConfig *faiss_config.FaissIndexConfig) {
-			defer wg.Done()
 			recallResult, err := faiss.FaissVectorSearch(faissIndexConfig, examples, *embeddingVector)
 			if err != nil {
 				logs.Error(err)
@@ -236,11 +234,15 @@ func (d *Dssm) ModelInferNoSkywalking(requestId string, userId string, itemList 
 		}(&faissIndexConfig)
 	}
 
-	wg.Wait()
-	for idx := 0; idx < len(recallCh); idx++ {
-		recallCellTmp := <-recallCh
-		for _, item := range recallCellTmp {
-			mergeResult = append(mergeResult, item)
+loop:
+	for {
+		select {
+		case <-time.After(time.Millisecond * 100):
+			break loop
+		case recall := <-recallCh:
+			for _, item := range recall {
+				mergeResult = append(mergeResult, item)
+			}
 		}
 	}
 	close(recallCh)
