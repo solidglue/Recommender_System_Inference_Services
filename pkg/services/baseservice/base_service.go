@@ -9,13 +9,10 @@ import (
 	"infer-microservices/pkg/utils"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/afex/hystrix-go/hystrix"
 )
-
-var wg sync.WaitGroup
 
 // baseservice, all service extend baseservice
 type BaseService struct {
@@ -174,14 +171,19 @@ func (s *BaseService) modelInfer(r *http.Request, in *io.RecRequest, ServiceConf
 	resultCh := make(chan *io.ItemInfo, len(resultList))
 	if len(resultList) > 0 {
 		for i := 0; i < len(resultList); i++ {
-			wg.Add(1)
 			go formatDubboResponse(resultList[i], resultCh)
 		}
-		wg.Wait()
-		close(resultCh)
-		for itemScore := range resultCh {
-			itemsScores = append(itemsScores, itemScore)
+
+	loop:
+		for {
+			select {
+			case <-time.After(time.Millisecond * 100):
+				break loop
+			case itemScore := <-resultCh:
+				itemsScores = append(itemsScores, itemScore)
+			}
 		}
+		close(resultCh)
 
 		response["code"] = 200
 		response["message"] = "success"
@@ -230,14 +232,19 @@ func (s *BaseService) modelInferReduce(r *http.Request, in *io.RecRequest, Servi
 
 	if len(resultList) > 0 {
 		for i := 0; i < len(resultList); i++ {
-			wg.Add(1)
 			go formatDubboResponse(resultList[i], resultCh)
 		}
-		wg.Wait()
-		close(resultCh)
-		for itemScore := range resultCh {
-			itemsScores = append(itemsScores, itemScore)
+
+	loop:
+		for {
+			select {
+			case <-time.After(time.Millisecond * 100):
+				break loop
+			case itemScore := <-resultCh:
+				itemsScores = append(itemsScores, itemScore)
+			}
 		}
+		close(resultCh)
 
 		response["code"] = 200
 		response["message"] = "success"
@@ -248,8 +255,6 @@ func (s *BaseService) modelInferReduce(r *http.Request, in *io.RecRequest, Servi
 }
 
 func formatDubboResponse(itemScore map[string]interface{}, resultCh chan *io.ItemInfo) { //recallCh chan string) {
-	defer wg.Done()
-
 	itemId := itemScore["itemid"].(string)
 	score := float32(itemScore["score"].(float64))
 
