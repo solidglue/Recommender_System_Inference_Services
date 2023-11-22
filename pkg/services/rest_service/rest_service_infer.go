@@ -40,9 +40,20 @@ func (s *HttpService) GetRequest() *http.Request {
 
 // sync server
 func (s *HttpService) SyncRecommenderInfer(w http.ResponseWriter, r *http.Request) {
-	respCh := make(chan []byte, 10000)
+	respCh := make(chan []byte, 100)
 	go s.RecommenderInfer(w, r, respCh)
-	w.Write(<-respCh)
+
+	select {
+	case <-time.After(time.Millisecond * 100):
+		rsp := make(map[string]interface{}, 0)
+		rsp["error"] = "fatal"
+		rsp["status"] = "fail"
+		buff, _ := jsoniter.Marshal(rsp)
+		w.Write(buff)
+	case responseCh := <-respCh:
+		w.Write(responseCh)
+	}
+
 }
 
 // infer
@@ -54,8 +65,8 @@ func (s *HttpService) RecommenderInfer(w http.ResponseWriter, r *http.Request, c
 			rsp["error"] = "fatal"
 			rsp["status"] = "fail"
 			buff, _ := jsoniter.Marshal(rsp)
-			w.Write(buff)
-
+			//w.Write(buff)
+			ch <- buff
 		} //else {
 		//fmt.Println("")
 		//}
