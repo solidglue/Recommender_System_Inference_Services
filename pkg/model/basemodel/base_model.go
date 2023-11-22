@@ -187,6 +187,8 @@ loop:
 		case userContextExampleFeatures_ := <-userOnlineExampleCh:
 			userContextExampleFeatures = userContextExampleFeatures_
 			index_ += 1
+		case <-time.After(time.Millisecond * 100):
+			break loop
 		}
 		if index_ == 2 {
 			break loop
@@ -264,6 +266,8 @@ loop:
 		case itemExampleFeaturesList_ := <-itemListExampleCh:
 			itemExampleFeaturesList = *itemExampleFeaturesList_
 			index_ += 1
+		case <-time.After(time.Millisecond * 100):
+			break loop
 		}
 		if index_ == 3 {
 			break loop
