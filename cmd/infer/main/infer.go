@@ -17,6 +17,7 @@ func init() {
 
 // reset bloomfilter
 func resetBloom() {
+	//TODO: Cuckoo Filter better
 	var ticker *time.Ticker = time.NewTicker(7 * 24 * time.Hour) //every 7 days clean bloom filter
 	defer ticker.Stop()
 
@@ -46,11 +47,13 @@ func main() {
 	//start services.
 	dubboServiceApi := apiFactory.CreateDubboServiceApi()
 	grpcServiceApi := apiFactory.CreateGrpcServiceApi()
-	restServiceApi := apiFactory.CreateRestServiceApi()
+	//restServiceHttpApi := apiFactory.CreateRestServiceHttpApi()  // @deprecated
+	restServiceEchoApi := apiFactory.CreateRestServiceEchoApi()
 
 	go serviceStart(dubboServiceApi)
 	go serviceStart(grpcServiceApi)
-	go serviceStart(restServiceApi)
+	//go serviceStart(restServiceApi)  // @deprecated
+	go serviceStart(restServiceEchoApi)
 
 	select {}
 }

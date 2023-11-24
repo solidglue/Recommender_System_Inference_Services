@@ -58,13 +58,26 @@ func (f ApiFactory) CreateGrpcServiceApi() *grpc_api.GrpcServiceApi {
 }
 
 // create rest server
-func (f ApiFactory) CreateRestServiceApi() *rest_api.HttpServiceApi {
-	restServiceApi := new(rest_api.HttpServiceApi)
-	restServiceApi.SetServicePort(restPort)
-	restServiceApi.SetMaxCpuNum(maxCpuNum)
+// @deprecated
+func (f ApiFactory) CreateRestServiceHttpApi() *rest_api.HttpServiceApi {
+	httpServiceApi := new(rest_api.HttpServiceApi)
+	httpServiceApi.SetServicePort(restPort)
+	httpServiceApi.SetMaxCpuNum(maxCpuNum)
 
-	restService := serviceFactory.CreateRestService()
-	restServiceApi.SetRestService(restService)
+	httpService := serviceFactory.CreateHttpService()
+	httpServiceApi.SetRestService(httpService)
 
-	return restServiceApi
+	return httpServiceApi
+}
+
+// create rest server
+func (f ApiFactory) CreateRestServiceEchoApi() *rest_api.EchoServiceApi {
+	echoServiceApi := new(rest_api.EchoServiceApi)
+	echoServiceApi.SetServicePort(restPort)
+	echoServiceApi.SetMaxCpuNum(maxCpuNum)
+
+	echoService := serviceFactory.CreateEchoService()
+	echoServiceApi.SetRestService(echoService)
+
+	return echoServiceApi
 }

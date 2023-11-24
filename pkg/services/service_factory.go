@@ -82,10 +82,19 @@ func (f ServiceFactory) CreateGrpcService() *grpc_service.GrpcService {
 	return grpcService
 }
 
-// create rest server
-func (f ServiceFactory) CreateRestService() *rest_service.HttpService {
-	restService := new(rest_service.HttpService)
-	restService.SetBaseService(f.createBaseServiceSkywalking())
+// create http server
+// @deprecated
+func (f ServiceFactory) CreateHttpService() *rest_service.HttpService {
+	httpService := new(rest_service.HttpService)
+	httpService.SetBaseService(f.createBaseServiceSkywalking())
 
-	return restService
+	return httpService
+}
+
+// create echo server
+func (f ServiceFactory) CreateEchoService() *rest_service.EchoService {
+	echoService := new(rest_service.EchoService)
+	echoService.SetBaseService(f.createBaseServiceSkywalking())
+
+	return echoService
 }
