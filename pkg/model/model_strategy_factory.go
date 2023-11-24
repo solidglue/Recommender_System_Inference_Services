@@ -11,7 +11,6 @@ import (
 
 var baseModel *basemodel.BaseModel
 var modelStrategyMap map[string]ModelStrategyInterface
-var ShareModelsMap map[string]ModelStrategyInterface
 
 type ModelStrategyInterface interface {
 	//model infer.
@@ -25,6 +24,14 @@ type ModelStrategyFactory struct {
 
 func init() {
 	modelStrategyMap = make(map[string]ModelStrategyInterface, 0)
+}
+
+func SetModelStrategyMap(modelStrategy map[string]ModelStrategyInterface) {
+	modelStrategyMap = modelStrategy
+}
+
+func GetModelStrategyMap() map[string]ModelStrategyInterface {
+	return modelStrategyMap
 }
 
 func (m *ModelStrategyFactory) CreateModelStrategy(modelName string, serverConn *config_loader.ServiceConfig) ModelStrategyInterface {

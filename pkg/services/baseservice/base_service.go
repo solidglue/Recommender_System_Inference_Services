@@ -147,13 +147,13 @@ func (s *BaseService) modelInfer(r *http.Request, in *io.RecRequest, ServiceConf
 	//strategy pattern. share model
 	var modelStrategy model.ModelStrategyInterface
 	modelStrategyContext := model.ModelStrategyContext{}
-	_, ok := model.ShareModelsMap[in.GetDataId()]
+	_, ok := model.GetModelStrategyMap()[in.GetDataId()]
 	if !ok {
 		modelfactory := model.ModelStrategyFactory{}
 		modelStrategy = modelfactory.CreateModelStrategy(modelName, ServiceConfig)
-		model.ShareModelsMap[in.GetDataId()] = modelStrategy
+		model.GetModelStrategyMap()[in.GetDataId()] = modelStrategy
 	} else {
-		modelStrategy = model.ShareModelsMap[in.GetDataId()]
+		modelStrategy = model.GetModelStrategyMap()[in.GetDataId()]
 	}
 	modelStrategyContext.SetModelStrategy(modelStrategy)
 
@@ -208,13 +208,13 @@ func (s *BaseService) modelInferReduce(r *http.Request, in *io.RecRequest, Servi
 	//strategy pattern. share model
 	var modelStrategy model.ModelStrategyInterface
 	modelStrategyContext := model.ModelStrategyContext{}
-	_, ok := model.ShareModelsMap[in.GetDataId()]
+	_, ok := model.GetModelStrategyMap()[in.GetDataId()]
 	if !ok {
 		modelfactory := model.ModelStrategyFactory{}
 		modelStrategy = modelfactory.CreateModelStrategy(modelName, ServiceConfig)
-		model.ShareModelsMap[in.GetDataId()] = modelStrategy
+		model.GetModelStrategyMap()[in.GetDataId()] = modelStrategy
 	} else {
-		modelStrategy = model.ShareModelsMap[in.GetDataId()]
+		modelStrategy = model.GetModelStrategyMap()[in.GetDataId()]
 	}
 	modelStrategyContext.SetModelStrategy(modelStrategy)
 

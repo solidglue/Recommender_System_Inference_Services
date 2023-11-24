@@ -83,7 +83,7 @@ func (d *DeepFM) ModelInferSkywalking(requestId string, userId string, itemList 
 	}
 
 	//get infer samples.
-	spanUnionEmFv, _, err := internal.Tracer.CreateLocalSpan(r.Context())
+	spanUnionEmFv, _, err := internal.GetTracer().CreateLocalSpan(r.Context())
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func (d *DeepFM) ModelInferSkywalking(requestId string, userId string, itemList 
 
 	// get rank scores from tfserving model.
 	rankResult := make([]*faiss_index.ItemInfo, 0)
-	spanUnionEmFv, _, err = internal.Tracer.CreateLocalSpan(r.Context())
+	spanUnionEmFv, _, err = internal.GetTracer().CreateLocalSpan(r.Context())
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +124,7 @@ func (d *DeepFM) ModelInferSkywalking(requestId string, userId string, itemList 
 	logs.Debug(requestId, time.Now(), "rank result:", examples)
 
 	//format result.
-	spanUnionEmOut, _, err := internal.Tracer.CreateLocalSpan(r.Context())
+	spanUnionEmOut, _, err := internal.GetTracer().CreateLocalSpan(r.Context())
 	if err != nil {
 		return nil, err
 	}

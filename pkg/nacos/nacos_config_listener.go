@@ -20,7 +20,7 @@ var nacosLogLevel string
 var nacosUsername string
 var nacosPassword string
 var mt sync.Mutex
-var NacosListedMap = make(map[string]bool, 0)
+var nacosListedMap = make(map[string]bool, 0)
 
 type NacosConnConfig struct {
 	dataId      string `validate:"required,unique,min=4,max=10"`
@@ -88,14 +88,14 @@ func (r *NacosConnConfig) GetPort() uint64 {
 }
 
 func (n *NacosConnConfig) StartListenNacos() {
-	_, ok := NacosListedMap[n.dataId]
+	_, ok := nacosListedMap[n.dataId]
 	if !ok {
 		err := n.serviceConfigListen()
 		if err != nil {
 			logs.Fatal(n.dataId, time.Now(), err)
 			panic(err)
 		} else {
-			NacosListedMap[n.dataId] = true
+			nacosListedMap[n.dataId] = true
 		}
 	}
 }
@@ -190,7 +190,10 @@ func (n *NacosConnConfig) serviceConfigUpdate(dataId string, content string) err
 		serviceConf = director.ServiceConfigUpdaterNotContainIndexDirector(dataId, redisConfStr, modelConfStr)
 	}
 	logs.Info(dataId, "updated", time.Now(), serviceConf)
-	service_config_loader.ServiceConfigs[dataId] = &serviceConf
+
+	configMap := service_config_loader.GetServiceConfigs()
+	configMap[dataId] = &serviceConf
+	service_config_loader.SetServiceConfigs(configMap)
 
 	return nil
 }

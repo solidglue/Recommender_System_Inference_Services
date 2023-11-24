@@ -88,7 +88,7 @@ func (s *EchoService) RecommenderInfer(c echo.Context, ch chan<- map[string]inte
 	nacosConfig.StartListenNacos()
 
 	//infer
-	ServiceConfig := config_loader.ServiceConfigs[request.GetDataId()]
+	ServiceConfig := config_loader.GetServiceConfigs()[request.GetDataId()]
 	response, err := s.baseservice.RecommenderInferHystrix(c.Request(), "restServer", &request, ServiceConfig)
 	if err != nil {
 		logs.Error(requestId, time.Now(), err)

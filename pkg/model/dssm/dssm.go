@@ -96,7 +96,7 @@ func (d *Dssm) ModelInferSkywalking(requestId string, userId string, itemList []
 	}
 
 	//get infer samples.
-	spanUnionEmFv, _, err := internal.Tracer.CreateLocalSpan(r.Context())
+	spanUnionEmFv, _, err := internal.GetTracer().CreateLocalSpan(r.Context())
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +112,7 @@ func (d *Dssm) ModelInferSkywalking(requestId string, userId string, itemList []
 	logs.Debug(requestId, time.Now(), "example:", examples)
 
 	// get embedding from tfserving model.
-	spanUnionEmFv, _, err = internal.Tracer.CreateLocalSpan(r.Context())
+	spanUnionEmFv, _, err = internal.GetTracer().CreateLocalSpan(r.Context())
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +157,7 @@ loop:
 	close(recallCh)
 
 	//format result.
-	spanUnionEmOut, _, err := internal.Tracer.CreateLocalSpan(r.Context())
+	spanUnionEmOut, _, err := internal.GetTracer().CreateLocalSpan(r.Context())
 	if err != nil {
 		return nil, err
 	}

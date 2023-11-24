@@ -91,7 +91,7 @@ func (s *GrpcService) recommenderInferContext(ctx context.Context, in *Recommend
 	nacosConfig.StartListenNacos()
 
 	//infer
-	ServiceConfig := config_loader.ServiceConfigs[in.GetDataId()]
+	ServiceConfig := config_loader.GetServiceConfigs()[in.GetDataId()]
 	response_, err := s.baseservice.RecommenderInferHystrix(nil, "GrpcService", &request, ServiceConfig)
 	if err != nil {
 		response.Message = fmt.Sprintf("%s", err)

@@ -96,7 +96,7 @@ func (s *DubboService) recommenderInferContext(ctx context.Context, in *io.RecRe
 	nacosConfig.StartListenNacos()
 
 	//infer
-	ServiceConfig := config_loader.ServiceConfigs[in.GetDataId()]
+	ServiceConfig := config_loader.GetServiceConfigs()[in.GetDataId()]
 	response_, err := s.baseservice.RecommenderInferHystrix(nil, "dubboServer", in, ServiceConfig)
 	if err != nil || len(response_) == 0 {
 		response.SetMessage(fmt.Sprintf("%s", err))

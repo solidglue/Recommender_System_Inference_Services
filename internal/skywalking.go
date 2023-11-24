@@ -9,13 +9,17 @@ import (
 
 // go2sky
 var report go2sky.Reporter
-var Tracer *go2sky.Tracer
+var tracer *go2sky.Tracer
 var errReport error
 var errTracer error
 
+func GetTracer() *go2sky.Tracer {
+	return tracer
+}
+
 func SkywalkingTracer(go2skyAddr string, serverName string) {
 	report, errReport = reporter.NewGRPCReporter(go2skyAddr)
-	Tracer, errTracer = go2sky.NewTracer(serverName, go2sky.WithReporter(report))
+	tracer, errTracer = go2sky.NewTracer(serverName, go2sky.WithReporter(report))
 	if errReport != nil {
 		logs.Error("crate grpc reporter error: %v \n", errReport)
 	}

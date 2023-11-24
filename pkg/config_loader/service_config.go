@@ -6,7 +6,15 @@ import (
 	"infer-microservices/pkg/config_loader/redis_config"
 )
 
-var ServiceConfigs = make(map[string]*ServiceConfig, 0) //one server/dataid,one service conn
+var serviceConfigs = make(map[string]*ServiceConfig, 0) //one server/dataid,one service conn
+
+func SetServiceConfigs(serviceConfigs_ map[string]*ServiceConfig) {
+	serviceConfigs = serviceConfigs_
+}
+
+func GetServiceConfigs() map[string]*ServiceConfig {
+	return serviceConfigs
+}
 
 type ServiceConfig struct {
 	serviceId         string                         `validate:"required,unique,min=4,max=10"` //dataid

@@ -61,7 +61,7 @@ func (s *HttpServiceApi) restNoskywalkingServerRunner(path []string, InferFunc [
 func (s *HttpServiceApi) restSkywalkingServerRunner(go2skyAddr string, serverName string, path []string, InferFunc []InferFunc) error {
 	internal.SkywalkingTracer(go2skyAddr, serverName)
 
-	sm, err := httpPlugin.NewServerMiddleware(internal.Tracer)
+	sm, err := httpPlugin.NewServerMiddleware(internal.GetTracer())
 	if err != nil {
 		logs.Error("create server middleware error %v \n", err)
 	}

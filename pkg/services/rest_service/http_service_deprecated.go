@@ -111,7 +111,7 @@ func (s *HttpService) RecommenderInfer(w http.ResponseWriter, r *http.Request, c
 	nacosConfig.StartListenNacos()
 
 	//infer
-	ServiceConfig := config_loader.ServiceConfigs[request.GetDataId()]
+	ServiceConfig := config_loader.GetServiceConfigs()[request.GetDataId()]
 	response, err := s.baseservice.RecommenderInferHystrix(r, "restServer", &request, ServiceConfig)
 	if err != nil {
 		logs.Error(requestId, time.Now(), err)
