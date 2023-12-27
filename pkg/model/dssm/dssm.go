@@ -5,11 +5,12 @@ import (
 	"infer-microservices/internal"
 	faiss_index "infer-microservices/internal/faiss_gogofaster"
 	"infer-microservices/internal/flags"
+	"infer-microservices/internal/logs"
+	"infer-microservices/internal/utils"
 	"infer-microservices/pkg/config_loader/faiss_config"
 	"infer-microservices/pkg/faiss"
-	"infer-microservices/pkg/logs"
+	"infer-microservices/pkg/feature"
 	"infer-microservices/pkg/model/basemodel"
-	"infer-microservices/pkg/utils"
 	"net/http"
 	"time"
 
@@ -268,7 +269,7 @@ loop:
 }
 
 // request embedding vector from tfserving
-func (d *Dssm) embedding(examples internal.ExampleFeatures, tensorName string) (*[]float32, error) {
+func (d *Dssm) embedding(examples feature.ExampleFeatures, tensorName string) (*[]float32, error) {
 
 	userExamples := make([][]byte, 0)
 	userContextExamples := make([][]byte, 0)

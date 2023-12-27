@@ -3,7 +3,7 @@ package basemodel
 import (
 	"infer-microservices/internal"
 	"infer-microservices/internal/flags"
-	"infer-microservices/pkg/logs"
+	"infer-microservices/internal/logs"
 
 	"strings"
 

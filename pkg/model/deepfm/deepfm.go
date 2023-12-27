@@ -5,9 +5,10 @@ import (
 	"infer-microservices/internal"
 	faiss_index "infer-microservices/internal/faiss_gogofaster"
 	"infer-microservices/internal/flags"
-	"infer-microservices/pkg/logs"
+	"infer-microservices/internal/logs"
+	"infer-microservices/internal/utils"
+	"infer-microservices/pkg/feature"
 	"infer-microservices/pkg/model/basemodel"
-	"infer-microservices/pkg/utils"
 	"net/http"
 	"time"
 
@@ -214,7 +215,7 @@ func (d *DeepFM) ModelInferNoSkywalking(requestId string, userId string, itemLis
 }
 
 // request rank scores from tfserving
-func (d *DeepFM) rankPredict(examples internal.ExampleFeatures, tensorName string) (*[]string, *[]float32, error) {
+func (d *DeepFM) rankPredict(examples feature.ExampleFeatures, tensorName string) (*[]string, *[]float32, error) {
 
 	userExamples := make([][]byte, 0)
 	userContextExamples := make([][]byte, 0)

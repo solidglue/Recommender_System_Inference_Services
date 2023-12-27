@@ -8,11 +8,12 @@ import (
 
 	faiss_index "infer-microservices/internal/faiss_gogofaster"
 	"infer-microservices/internal/flags"
+	"infer-microservices/internal/logs"
 	framework "infer-microservices/internal/tensorflow_gogofaster/core/framework"
 	tfserving "infer-microservices/internal/tfserving_gogofaster"
+	"infer-microservices/internal/utils"
 	config_loader "infer-microservices/pkg/config_loader"
-	"infer-microservices/pkg/logs"
-	"infer-microservices/pkg/utils"
+	"infer-microservices/pkg/feature"
 	"time"
 
 	"github.com/allegro/bigcache"
@@ -33,7 +34,7 @@ var maxEntriesInWindow int
 var verbose bool
 var shards int
 
-type CreateSampleCallBackFunc func(userId string, itemList []string) (internal.ExampleFeatures, error)
+type CreateSampleCallBackFunc func(userId string, itemList []string) (feature.ExampleFeatures, error)
 
 var SampleCallBackFuncMap = make(map[string]CreateSampleCallBackFunc, 0)
 
@@ -129,13 +130,13 @@ func (b *BaseModel) notify(sub Subject) {
 }
 
 // Each model may have multiple ways to create samples, using callback functions to determine which method to call
-func (d *BaseModel) GetInferExampleFeaturesNotContainItems(userId string, itemList []string) (internal.ExampleFeatures, error) {
+func (d *BaseModel) GetInferExampleFeaturesNotContainItems(userId string, itemList []string) (feature.ExampleFeatures, error) {
 	cacheKeyPrefix := userId + d.serviceConfig.GetServiceId() + d.modelName + "_samples"
 
 	//init examples
-	userExampleFeatures := &internal.SeqExampleBuff{}
-	userContextExampleFeatures := &internal.SeqExampleBuff{}
-	exampleData := internal.ExampleFeatures{
+	userExampleFeatures := &feature.SeqExampleBuff{}
+	userContextExampleFeatures := &feature.SeqExampleBuff{}
+	exampleData := feature.ExampleFeatures{
 		UserExampleFeatures:        userExampleFeatures,
 		UserContextExampleFeatures: userContextExampleFeatures,
 	}
@@ -166,13 +167,13 @@ func (d *BaseModel) GetInferExampleFeaturesNotContainItems(userId string, itemLi
 
 	//INFO:Asynchronous invocation of user offline samples, user real-time samples, and item samples
 	//INFO:The process of constructing samples is independent
-	userOfflineExampleCh := make(chan *internal.SeqExampleBuff, 1)
-	userOnlineExampleCh := make(chan *internal.SeqExampleBuff, 1)
+	userOfflineExampleCh := make(chan *feature.SeqExampleBuff, 1)
+	userOnlineExampleCh := make(chan *feature.SeqExampleBuff, 1)
 
 	//get user offline example
-	go d.getUserExampleFeatures(userId, userOfflineExampleCh)
+	go d.getUserExampleFeaturesOffline(userId, userOfflineExampleCh)
 	//get user online example
-	go d.getUserContextExampleFeatures(userId, userOnlineExampleCh)
+	go d.getUserExampleFeaturesRealtime(userId, userOnlineExampleCh)
 
 	index_ := 0
 
@@ -193,7 +194,7 @@ loop:
 		}
 	}
 
-	exampleData = internal.ExampleFeatures{
+	exampleData = feature.ExampleFeatures{
 		UserExampleFeatures:        userExampleFeatures,
 		UserContextExampleFeatures: userContextExampleFeatures,
 	}
@@ -207,14 +208,14 @@ loop:
 }
 
 // Each model may have multiple ways to create samples, using callback functions to determine which method to call
-func (d *BaseModel) GetInferExampleFeaturesContainItems(userId string, itemList []string) (internal.ExampleFeatures, error) {
+func (d *BaseModel) GetInferExampleFeaturesContainItems(userId string, itemList []string) (feature.ExampleFeatures, error) {
 	cacheKeyPrefix := userId + d.serviceConfig.GetServiceId() + d.GetModelName() + "_samples"
 
 	//init examples
-	userExampleFeatures := &internal.SeqExampleBuff{}
-	userContextExampleFeatures := &internal.SeqExampleBuff{}
-	itemExampleFeaturesList := make([]internal.SeqExampleBuff, 0)
-	exampleData := internal.ExampleFeatures{
+	userExampleFeatures := &feature.SeqExampleBuff{}
+	userContextExampleFeatures := &feature.SeqExampleBuff{}
+	itemExampleFeaturesList := make([]feature.SeqExampleBuff, 0)
+	exampleData := feature.ExampleFeatures{
 		UserExampleFeatures:        userExampleFeatures,
 		UserContextExampleFeatures: userContextExampleFeatures,
 		ItemSeqExampleFeatures:     &itemExampleFeaturesList,
@@ -239,14 +240,14 @@ func (d *BaseModel) GetInferExampleFeaturesContainItems(userId string, itemList 
 
 	//INFO:Asynchronous invocation of user offline samples, user real-time samples, and item samples
 	//INFO:The process of constructing samples is independent
-	userOfflineExampleCh := make(chan *internal.SeqExampleBuff, 1)
-	userOnlineExampleCh := make(chan *internal.SeqExampleBuff, 1)
-	itemListExampleCh := make(chan *[]internal.SeqExampleBuff, 1)
+	userOfflineExampleCh := make(chan *feature.SeqExampleBuff, 1)
+	userOnlineExampleCh := make(chan *feature.SeqExampleBuff, 1)
+	itemListExampleCh := make(chan *[]feature.SeqExampleBuff, 1)
 
 	//get user offline example
-	go d.getUserExampleFeatures(userId, userOfflineExampleCh)
+	go d.getUserExampleFeaturesOffline(userId, userOfflineExampleCh)
 	//get user online example
-	go d.getUserContextExampleFeatures(userId, userOnlineExampleCh)
+	go d.getUserExampleFeaturesRealtime(userId, userOnlineExampleCh)
 	//get items features.
 	go d.getItemExamplesFeatures(itemList, itemListExampleCh)
 
@@ -272,7 +273,7 @@ loop:
 		}
 	}
 
-	exampleData = internal.ExampleFeatures{
+	exampleData = feature.ExampleFeatures{
 		UserExampleFeatures:        userExampleFeatures,
 		UserContextExampleFeatures: userContextExampleFeatures,
 		ItemSeqExampleFeatures:     &itemExampleFeaturesList,
@@ -285,11 +286,11 @@ loop:
 	return exampleData, nil
 }
 
-func (d *BaseModel) getItemExamplesFeatures(itemList []string, ch chan<- *[]internal.SeqExampleBuff) {
+func (d *BaseModel) getItemExamplesFeatures(itemList []string, ch chan<- *[]feature.SeqExampleBuff) {
 	//TODO: use bloom filter check items, avoid all items search redis.
 	redisKeyPrefix := d.serviceConfig.GetModelConfig().GetItemRedisKeyPre()
-	itemSeqExampleBuffs := make([]internal.SeqExampleBuff, 0)
-	itemsCh := make(chan internal.SeqExampleBuff, 100)
+	itemSeqExampleBuffs := make([]feature.SeqExampleBuff, 0)
+	itemsCh := make(chan feature.SeqExampleBuff, 100)
 
 	for _, itemId := range itemList {
 		go func(itemId string) {
@@ -303,7 +304,7 @@ func (d *BaseModel) getItemExamplesFeatures(itemList []string, ch chan<- *[]inte
 					itemExampleFeatsBuff = []byte(userExampleFeats)
 				}
 
-				itemSeqExampleBuff := internal.SeqExampleBuff{
+				itemSeqExampleBuff := feature.SeqExampleBuff{
 					Key:  &itemId,
 					Buff: &itemExampleFeatsBuff,
 				}
@@ -329,13 +330,13 @@ func (d *BaseModel) getItemExamplesFeatures(itemList []string, ch chan<- *[]inte
 }
 
 // get user tfrecords offline samples
-func (b *BaseModel) getUserExampleFeatures(userId string, ch chan<- *internal.SeqExampleBuff) {
+func (b *BaseModel) getUserExampleFeaturesOffline(userId string, ch chan<- *feature.SeqExampleBuff) {
 	//INFO: use bloom filter check users, avoid all users search redis.
 
-	userSeqExampleBuff := internal.SeqExampleBuff{}
+	userSeqExampleBuff := feature.SeqExampleBuff{}
 	userExampleFeatsBuff := make([]byte, 0)
 
-	redisKey := b.serviceConfig.GetModelConfig().GetUserRedisKeyPre() + userId
+	redisKey := b.serviceConfig.GetModelConfig().GetUserRedisKeyPreOffline() + userId
 	if b.userBloomFilter.Test([]byte(userId)) {
 		userExampleFeats, err := b.serviceConfig.GetRedisConfig().GetRedisPool().Get(redisKey)
 		if err != nil {
@@ -346,7 +347,7 @@ func (b *BaseModel) getUserExampleFeatures(userId string, ch chan<- *internal.Se
 	}
 
 	//protrait features & realtime features.
-	userSeqExampleBuff = internal.SeqExampleBuff{
+	userSeqExampleBuff = feature.SeqExampleBuff{
 		Key:  &userId,
 		Buff: &userExampleFeatsBuff,
 	}
@@ -355,14 +356,24 @@ func (b *BaseModel) getUserExampleFeatures(userId string, ch chan<- *internal.Se
 }
 
 // get user tfrecords online samples
-func (b *BaseModel) getUserContextExampleFeatures(userId string, ch chan<- *internal.SeqExampleBuff) {
+func (b *BaseModel) getUserExampleFeaturesRealtime(userId string, ch chan<- *feature.SeqExampleBuff) {
 	//TODO: use bloom filter check users, avoid all users search redis.
-	userContextSeqExampleBuff := internal.SeqExampleBuff{}
+	userContextSeqExampleBuff := feature.SeqExampleBuff{}
 	userContextExampleFeatsBuff := make([]byte, 0)
+
+	redisKey := b.serviceConfig.GetModelConfig().GetUserRedisKeyPreRealtime() + userId
+	if b.userBloomFilter.Test([]byte(userId)) {
+		userContextSeqExampleBuff, err := b.serviceConfig.GetRedisConfig().GetRedisPool().Get(redisKey)
+		if err != nil {
+			logs.Error("get item features err", err)
+		} else {
+			userContextExampleFeatsBuff = []byte(userContextSeqExampleBuff) //.(string)
+		}
+	}
 
 	//TODO: update context features. only from requst. such as location , time
 	//context features.
-	userContextSeqExampleBuff = internal.SeqExampleBuff{
+	userContextSeqExampleBuff = feature.SeqExampleBuff{
 		Key:  &userId,
 		Buff: &userContextExampleFeatsBuff,
 	}
