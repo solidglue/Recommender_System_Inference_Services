@@ -191,3 +191,17 @@ func (f *FlagFactory) CreateFlagJwt() *FlagJwt {
 
 	return ft
 }
+
+//kafka factory
+func (f *FlagFactory) CreateFlagKafka() *flagKafka {
+	kafkaUrl := flag.String("kafka_url", "l27.0.0.1:9092", "")
+	kafkaTopic := flag.String("kafka_topic", "kafka_topic_001", "")
+	kafkaGroup := flag.String("kafka_group", "kafka_group_001", "")
+
+	ft := getFlagKafkaInstance()
+	ft.setKafkaUrl(*kafkaUrl)
+	ft.setKafkaTopic(*kafkaTopic)
+	ft.setKafkaGroup(*kafkaGroup)
+
+	return ft
+}
