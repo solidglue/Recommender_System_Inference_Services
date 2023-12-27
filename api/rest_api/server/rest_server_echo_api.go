@@ -3,7 +3,8 @@ package server
 import (
 	"fmt"
 	"infer-microservices/internal"
-	"infer-microservices/pkg/logs"
+	"infer-microservices/internal/jwt"
+	"infer-microservices/internal/logs"
 	"infer-microservices/pkg/services/rest_service"
 	"runtime"
 
@@ -63,14 +64,14 @@ func skywalkingMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 
 // @implement start infertace
 func (s *EchoServiceApi) ServiceStart() {
-	echoApi.POST("/login2", internal.Login)
+	echoApi.POST("/login2", jwt.Login)
 
 	// Restricted group
 	r := echoApi.Group("/infer2")
 
 	// Configure middleware with the custom claims type
 	config := middleware.JWTConfig{
-		Claims:     &internal.JwtCustomClaims{},
+		Claims:     &jwt.JwtCustomClaims{},
 		SigningKey: []byte("secret"),
 	}
 	r.Use(middleware.JWTWithConfig(config))

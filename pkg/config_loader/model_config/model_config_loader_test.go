@@ -56,14 +56,14 @@ func TestModelConfigLoader(t *testing.T) {
 	t.Log("modelConf:", modelConf)
 
 	//test user features
-	rst, err := redisConf.GetRedisPool().HGetAll(modelConf.userRedisKeyPre + testUserId)
+	rst, err := redisConf.GetRedisPool().HGetAll(modelConf.userRedisKeyPreOffline + testUserId)
 	if err != nil {
 		t.Errorf("redis init failed")
 	}
 	t.Log("user features:", rst)
 
 	//test item features
-	rst, err = redisConf.GetRedisPool().HGetAll(modelConf.userRedisKeyPre + testItemId)
+	rst, err = redisConf.GetRedisPool().HGetAll(modelConf.itemRedisKeyPre + testItemId)
 	if err != nil {
 		t.Errorf("redis init failed")
 	}

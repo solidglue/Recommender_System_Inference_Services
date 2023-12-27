@@ -1,7 +1,7 @@
 package service_config_loader
 
 import (
-	"infer-microservices/pkg/logs"
+	"infer-microservices/internal/logs"
 	"time"
 
 	validator "github.com/go-playground/validator/v10"

@@ -3,8 +3,8 @@ package faiss_config
 import (
 	"infer-microservices/internal"
 	faiss_index "infer-microservices/internal/faiss_gogofaster"
-	"infer-microservices/pkg/logs"
-	"infer-microservices/pkg/utils"
+	"infer-microservices/internal/logs"
+	"infer-microservices/internal/utils"
 	"reflect"
 	"strconv"
 )

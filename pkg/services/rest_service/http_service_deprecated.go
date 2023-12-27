@@ -3,8 +3,8 @@ package rest_service
 import (
 	"context"
 	"errors"
-	"infer-microservices/pkg/logs"
-	"infer-microservices/pkg/utils"
+	"infer-microservices/internal/logs"
+	"infer-microservices/internal/utils"
 	"net/http"
 
 	config_loader "infer-microservices/pkg/config_loader"

@@ -1,12 +1,12 @@
 package baseservice
 
 import (
+	"infer-microservices/internal/logs"
+	"infer-microservices/internal/utils"
 	config_loader "infer-microservices/pkg/config_loader"
-	"infer-microservices/pkg/logs"
 	"infer-microservices/pkg/model"
 	"infer-microservices/pkg/model/basemodel"
 	"infer-microservices/pkg/services/io"
-	"infer-microservices/pkg/utils"
 	"net/http"
 	"strings"
 	"time"

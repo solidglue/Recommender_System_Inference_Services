@@ -2,12 +2,12 @@ package rest_service
 
 import (
 	"errors"
+	"infer-microservices/internal/logs"
+	"infer-microservices/internal/utils"
 	config_loader "infer-microservices/pkg/config_loader"
-	"infer-microservices/pkg/logs"
 	nacos "infer-microservices/pkg/nacos"
 	"infer-microservices/pkg/services/baseservice"
 	"infer-microservices/pkg/services/io"
-	"infer-microservices/pkg/utils"
 	"net/http"
 	"time"
 

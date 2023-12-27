@@ -1,7 +1,7 @@
 package internal
 
 import (
-	"infer-microservices/pkg/logs"
+	"infer-microservices/internal/logs"
 
 	"github.com/SkyAPM/go2sky"
 	"github.com/SkyAPM/go2sky/reporter"

@@ -3,11 +3,11 @@ package grpc_service
 import (
 	"errors"
 	"fmt"
+	"infer-microservices/internal/utils"
 	config_loader "infer-microservices/pkg/config_loader"
-	"infer-microservices/pkg/utils"
 	"time"
 
-	"infer-microservices/pkg/logs"
+	"infer-microservices/internal/logs"
 	nacos "infer-microservices/pkg/nacos"
 	"infer-microservices/pkg/services/baseservice"
 	"infer-microservices/pkg/services/io"

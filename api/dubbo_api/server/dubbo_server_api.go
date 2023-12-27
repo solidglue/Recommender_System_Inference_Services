@@ -2,7 +2,7 @@ package server
 
 import (
 	"context"
-	"infer-microservices/pkg/logs"
+	"infer-microservices/internal/logs"
 	dubbo_service "infer-microservices/pkg/services/dubbo_service"
 	"infer-microservices/pkg/services/io"
 	"time"

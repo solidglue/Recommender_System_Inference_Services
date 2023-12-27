@@ -2,7 +2,8 @@ package faiss
 
 import (
 	"context"
-	"infer-microservices/internal"
+	"infer-microservices/pkg/feature"
+
 	faiss_index "infer-microservices/internal/faiss_gogofaster"
 	"infer-microservices/internal/flags"
 	"infer-microservices/pkg/config_loader/faiss_config"
@@ -16,7 +17,7 @@ func init() {
 	flagTensorflow := flagFactory.CreateFlagTensorflow()
 	grpcTimeout = *flagTensorflow.GetTfservingTimeoutMs()
 }
-func FaissVectorSearch(f *faiss_config.FaissIndexConfig, example internal.ExampleFeatures, vector []float32) ([]*faiss_index.ItemInfo, error) {
+func FaissVectorSearch(f *faiss_config.FaissIndexConfig, example feature.ExampleFeatures, vector []float32) ([]*faiss_index.ItemInfo, error) {
 
 	faissIndexs := f.GetFaissIndexs()
 	faissGrpcConn, err := f.GetFaissGrpcPool().Get()

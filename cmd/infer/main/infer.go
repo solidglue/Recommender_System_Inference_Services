@@ -4,7 +4,7 @@ import (
 	"flag"
 	"infer-microservices/api"
 	"infer-microservices/internal"
-	"infer-microservices/pkg/logs"
+	"infer-microservices/internal/logs"
 	"infer-microservices/pkg/model/basemodel"
 	"time"
 )

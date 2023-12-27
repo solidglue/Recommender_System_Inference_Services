@@ -2,8 +2,8 @@ package nacos
 
 import (
 	"infer-microservices/internal/flags"
+	"infer-microservices/internal/logs"
 	service_config_loader "infer-microservices/pkg/config_loader"
-	"infer-microservices/pkg/logs"
 	"sync"
 	"time"
 

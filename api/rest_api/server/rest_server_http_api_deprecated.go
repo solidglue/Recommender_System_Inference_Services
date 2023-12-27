@@ -3,7 +3,8 @@ package server
 import (
 	"fmt"
 	"infer-microservices/internal"
-	"infer-microservices/pkg/logs"
+	"infer-microservices/internal/jwt"
+	"infer-microservices/internal/logs"
 	"infer-microservices/pkg/services/rest_service"
 	"net/http"
 	"runtime"
@@ -13,7 +14,7 @@ import (
 
 //TODO: test gin rest api, test dubbo restful api
 
-type InferFunc func(w http.ResponseWriter, r *http.Request)
+type CallbackFunc func(w http.ResponseWriter, r *http.Request)
 
 type HttpServiceApi struct {
 	serverPort  uint
@@ -34,10 +35,10 @@ func (s *HttpServiceApi) SetRestService(httpService *rest_service.HttpService) {
 	s.httpService = httpService
 }
 
-func (s *HttpServiceApi) restNoskywalkingServerRunner(path []string, InferFunc []InferFunc) error {
+func (s *HttpServiceApi) restNoskywalkingServerRunner(path []string, CallbackFunc []CallbackFunc) error {
 	for idx, p := range path {
-		//http.HandleFunc(p, InferFunc[idx])
-		http.Handle(p, internal.JwtAuthMiddleware(http.HandlerFunc(InferFunc[idx])))
+		//http.HandleFunc(p, CallbackFunc [idx])
+		http.Handle(p, jwt.JwtAuthMiddleware(http.HandlerFunc(CallbackFunc[idx])))
 	}
 
 	cpuNum := runtime.NumCPU()
@@ -58,7 +59,7 @@ func (s *HttpServiceApi) restNoskywalkingServerRunner(path []string, InferFunc [
 	return nil
 }
 
-func (s *HttpServiceApi) restSkywalkingServerRunner(go2skyAddr string, serverName string, path []string, InferFunc []InferFunc) error {
+func (s *HttpServiceApi) restSkywalkingServerRunner(go2skyAddr string, serverName string, path []string, CallbackFunc []CallbackFunc) error {
 	internal.SkywalkingTracer(go2skyAddr, serverName)
 
 	sm, err := httpPlugin.NewServerMiddleware(internal.GetTracer())
@@ -66,13 +67,13 @@ func (s *HttpServiceApi) restSkywalkingServerRunner(go2skyAddr string, serverNam
 		logs.Error("create server middleware error %v \n", err)
 	}
 	logs.Info("path:", path)
-	logs.Info("InferFunc:", InferFunc)
+	logs.Info("CallbackFunc :", CallbackFunc)
 
 	route := http.NewServeMux()
 	for idx, p := range path {
-		logs.Info("p InferFunc[]:", p, InferFunc[idx])
-		//route.HandleFunc(p, InferFunc[idx])
-		route.Handle(p, internal.JwtAuthMiddleware(http.HandlerFunc(InferFunc[idx])))
+		logs.Info("p CallbackFunc []:", p, CallbackFunc[idx])
+		//route.HandleFunc(p, CallbackFunc [idx])
+		route.Handle(p, jwt.JwtAuthMiddleware(http.HandlerFunc(CallbackFunc[idx])))
 
 	}
 
@@ -100,15 +101,15 @@ func (s *HttpServiceApi) ServiceStart() {
 		"/login", "/infer",
 	}
 
-	InferFuncs := []InferFunc{
-		internal.AuthHandler, s.httpService.SyncRecommenderInfer,
+	CallbackFuncs := []CallbackFunc{
+		jwt.AuthHandler, s.httpService.SyncRecommenderInfer,
 	}
 
 	if s.httpService.GetBaseService().GetSkywalkingWeatherOpen() {
 		go2skyAddr := s.httpService.GetBaseService().GetSkywalkingIp() + ":" + fmt.Sprintf(":%d", s.httpService.GetBaseService().GetSkywalkingPort())
-		go s.restSkywalkingServerRunner(go2skyAddr, s.httpService.GetBaseService().GetSkywalkingServerName(), paths, InferFuncs)
+		go s.restSkywalkingServerRunner(go2skyAddr, s.httpService.GetBaseService().GetSkywalkingServerName(), paths, CallbackFuncs)
 	} else {
-		go s.restNoskywalkingServerRunner(paths, InferFuncs)
+		go s.restNoskywalkingServerRunner(paths, CallbackFuncs)
 	}
 
 	select {}

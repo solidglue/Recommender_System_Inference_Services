@@ -1,8 +1,8 @@
 package redis_config
 
 import (
-	redis_v8 "infer-microservices/pkg/db/redis"
-	"infer-microservices/pkg/utils"
+	redis_v8 "infer-microservices/internal/db/redis"
+	"infer-microservices/internal/utils"
 )
 
 type RedisConfig struct {

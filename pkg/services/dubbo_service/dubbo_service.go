@@ -7,10 +7,10 @@ import (
 	config_loader "infer-microservices/pkg/config_loader"
 	"infer-microservices/pkg/services/baseservice"
 
-	"infer-microservices/pkg/logs"
+	"infer-microservices/internal/logs"
+	"infer-microservices/internal/utils"
 	nacos "infer-microservices/pkg/nacos"
 	"infer-microservices/pkg/services/io"
-	"infer-microservices/pkg/utils"
 	"time"
 
 	_ "dubbo.apache.org/dubbo-go/v3/imports"

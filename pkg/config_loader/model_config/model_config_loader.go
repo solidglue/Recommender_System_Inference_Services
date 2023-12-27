@@ -2,7 +2,7 @@ package model_config
 
 import (
 	"infer-microservices/internal"
-	"infer-microservices/pkg/utils"
+	"infer-microservices/internal/utils"
 )
 
 type ModelConfig struct {
@@ -10,8 +10,9 @@ type ModelConfig struct {
 	tfservingModelName string             `validate:"required,min=4,max=10"`        //model name of tfserving config list.
 	tfservingGrpcPool  *internal.GRPCPool `validate:"required"`                     //tfserving grpc pool.
 	//fieldsSpec         map[string]interface{} //feaure engine conf.
-	userRedisKeyPre string `validate:"required,min=4,max=10"` //user feature redis key pre.
-	itemRedisKeyPre string `validate:"required,min=4,max=10"` //item feature redis key pre.
+	userRedisKeyPreOffline  string `validate:"required,min=4,max=10"` //user offline feature redis key pre.
+	userRedisKeyPreRealtime string `validate:"required,min=4,max=10"` //user Realtime feature redis key pre.
+	itemRedisKeyPre         string `validate:"required,min=4,max=10"` //item feature redis key pre.
 }
 
 func init() {
@@ -45,12 +46,21 @@ func (f *ModelConfig) GetTfservingGrpcPool() *internal.GRPCPool {
 }
 
 // userRedisKeyPre
-func (f *ModelConfig) setUserRedisKeyPre(userRedisKeyPre string) {
-	f.userRedisKeyPre = userRedisKeyPre
+func (f *ModelConfig) setUserRedisKeyPreOffline(userRedisKeyPreOffline string) {
+	f.userRedisKeyPreOffline = userRedisKeyPreOffline
 }
 
-func (f *ModelConfig) GetUserRedisKeyPre() string {
-	return f.userRedisKeyPre
+func (f *ModelConfig) GetUserRedisKeyPreOffline() string {
+	return f.userRedisKeyPreOffline
+}
+
+// userRedisKeyPre
+func (f *ModelConfig) setUserRedisKeyPreRealtime(userRedisKeyPreRealtime string) {
+	f.userRedisKeyPreRealtime = userRedisKeyPreRealtime
+}
+
+func (f *ModelConfig) GetUserRedisKeyPreRealtime() string {
+	return f.userRedisKeyPreRealtime
 }
 
 // itemRedisKeyPre
@@ -79,14 +89,16 @@ func (m *ModelConfig) ConfigLoad(dataId string, modelConfStr string) error {
 		}
 
 		//fieldsSpec := modelConfTmp["fieldsSpec"].(map[string]interface{})
-		userRedisKeyPre := modelConfTmp["userRedisKeyPre"].(string)
+		userRedisKeyPreOffline := modelConfTmp["userRedisKeyPreOffline"].(string)
+		userRedisKeyPreRealtime := modelConfTmp["userRedisKeyPreRealtime"].(string)
 		itemRedisKeyPre := modelConfTmp["itemRedisKeyPre"].(string)
 
 		//set
 		m.setModelName(dataId)
 		m.setTfservingModelName(modelName)
 		m.setTfservingGrpcPool(tfservingGrpcPool)
-		m.setUserRedisKeyPre(userRedisKeyPre)
+		m.setUserRedisKeyPreOffline(userRedisKeyPreOffline)
+		m.setUserRedisKeyPreRealtime(userRedisKeyPreRealtime)
 		m.setItemRedisKeyPre(itemRedisKeyPre)
 	}
 

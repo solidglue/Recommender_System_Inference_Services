@@ -3,7 +3,7 @@ package client
 import (
 	"context"
 	dubbo_api "infer-microservices/api/dubbo_api/server"
-	"infer-microservices/pkg/logs"
+	"infer-microservices/internal/logs"
 	"infer-microservices/pkg/services/io"
 
 	"dubbo.apache.org/dubbo-go/v3/config"

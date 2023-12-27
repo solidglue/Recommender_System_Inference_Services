@@ -1,7 +1,7 @@
 package nacos
 
 import (
-	"infer-microservices/pkg/logs"
+	"infer-microservices/internal/logs"
 	"infer-microservices/pkg/services/io"
 
 	validator "github.com/go-playground/validator/v10"
