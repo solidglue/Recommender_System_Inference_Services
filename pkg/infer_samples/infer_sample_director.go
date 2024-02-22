@@ -39,10 +39,10 @@ func (s *InferSampleDirector) RecallSampleDirector(model model_config.ModelConfi
 	if offlineFeature && onlineFeature {
 		builder := s.inferSampleBuilder.UserOfflineSampleBuilder(model, userId, featureList).UserRealtimeSampleBuilder(model, userId, featureList)
 		s.inferSampleBuilder = *builder
-	} else if offlineFeature && onlineFeature == false {
+	} else if offlineFeature && !onlineFeature {
 		builder := s.inferSampleBuilder.UserOfflineSampleBuilder(model, userId, featureList)
 		s.inferSampleBuilder = *builder
-	} else if offlineFeature == false && onlineFeature {
+	} else if !offlineFeature && onlineFeature {
 		builder := s.inferSampleBuilder.UserRealtimeSampleBuilder(model, userId, featureList)
 		s.inferSampleBuilder = *builder
 	}
@@ -81,10 +81,10 @@ func (s *InferSampleDirector) RankingSampleDirector(model model_config.ModelConf
 	if offlineFeature && onlineFeature {
 		builder := s.inferSampleBuilder.UserOfflineSampleBuilder(model, userId, featureList).UserRealtimeSampleBuilder(model, userId, featureList).ItemsSampleBuilder(model, itemIdList, featureList)
 		s.inferSampleBuilder = *builder
-	} else if offlineFeature && onlineFeature == false {
+	} else if offlineFeature && !onlineFeature {
 		builder := s.inferSampleBuilder.UserOfflineSampleBuilder(model, userId, featureList).ItemsSampleBuilder(model, itemIdList, featureList)
 		s.inferSampleBuilder = *builder
-	} else if offlineFeature == false && onlineFeature {
+	} else if !offlineFeature && onlineFeature {
 		builder := s.inferSampleBuilder.UserRealtimeSampleBuilder(model, userId, featureList).ItemsSampleBuilder(model, itemIdList, featureList)
 		s.inferSampleBuilder = *builder
 	}
