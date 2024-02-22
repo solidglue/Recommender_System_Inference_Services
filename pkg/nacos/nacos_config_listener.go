@@ -20,7 +20,7 @@ var nacosLogLevel string
 var nacosUsername string
 var nacosPassword string
 var mt sync.Mutex
-var nacosListedMap = make(map[string]bool, 0)
+var nacosListedMap = make(map[string]bool, 0) //TODO: use sync.Map
 
 type NacosConnConfig struct {
 	dataId      string `validate:"required,unique,min=4,max=10"`

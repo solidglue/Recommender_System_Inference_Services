@@ -115,28 +115,24 @@ function stop(){
     ps -ef | grep ${go_project} | grep -v grep | awk '{print $2}' | xargs kill -9
 }
 
-function main(){
-    case $1 in
-        "status")
-            status
-        ;;
+case $1 in
+    "status")
+        status
+    ;;
 
-        "start")  
-            #start 2 services.
-            start ${dubbo_server_conf1}
-            start ${dubbo_server_conf2}
-            status
-        ;;
+    "start")  
+        #start 2 services.
+        start ${dubbo_server_conf1}
+        start ${dubbo_server_conf2}
+        status
+    ;;
 
-        "stop")
-            status
-            stop
-        ;;
-		
-		*)
-		    echo "run args err, please input (status | start | stop) "	
-	esac		
-}
-
-main
+    "stop")
+        status
+        stop
+    ;;
+    
+    *)
+        echo "run args err, please input (status | start | stop) "	
+esac
 

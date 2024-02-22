@@ -10,10 +10,12 @@
 		"config": {
 			"model_conf": {
 				"model-001": {
-					"fieldsSpec": [{},{},{}],
+					"modelName":"dssm",
+					"modelType":"recall",
+					"featureList": [],
 					"tfservingGrpcAddr": {
 					    "tfservingModelName": "models",
-					    "addrs": [],
+					    "tfservingAddrs": [],
 						"pool_size": 50,
 						"initCap":10,
 						"idleTimeoutMs": 100,
@@ -21,7 +23,26 @@
 						"writeTimeoutMs":100,
 						"dialTimeoutS":600
 				    },
-				    "user_feature_rediskey_pre": "",
+				    "user_feature_rediskey_pre_offline": "",
+					"user_feature_rediskey_pre_realtime": "",
+				    "item_feature_rediskey_pre": ""
+				},
+				"model-002": {
+					"modelName":"deepfm",
+					"modelType":"rank",
+					"featureList": [],
+					"tfservingGrpcAddr": {
+					    "tfservingModelName": "models",
+					    "tfservingAddrs": [],
+						"pool_size": 50,
+						"initCap":10,
+						"idleTimeoutMs": 100,
+						"readTimeoutMs": 100,
+						"writeTimeoutMs":100,
+						"dialTimeoutS":600
+				    },
+				    "user_feature_rediskey_pre_offline": "",
+					"user_feature_rediskey_pre_realtime": "",
 				    "item_feature_rediskey_pre": ""
 				}
 			},
@@ -37,11 +58,11 @@
 				},
 				"indexInfo":[
 					{ 
-						"recallNum": 100,
+						"recallNum"   :1000    ,
 						"indexName": "index-001"
 					},
-					{ 
-						"recallNum": 100,
+					{
+						"recallNum"   :1000    ,
 						"indexName": "index-001"
 					}
 				]
@@ -57,6 +78,22 @@
 					"maxRetries":2,
 					"minIdleConns":50
 				}
+			},
+			"pipiline_conf":{
+				"pipeline":[
+				    "('recall_sample','recallSample')","('dssm_recall','dssmRecall')",
+				    "('pre_ranking_sample','preRankingSample')","('pre_ranking','dssmRank')",
+					"('ranking_sample','rankingSample')","('ranking','deepfm')",
+					"('re_rank','reRank')"
+				],
+				"recallNum"   :1000    ,
+				"preRankingNum"  :    200,
+
+				"pipeline_light":[
+				    "('recall_sample','recallSample')","('fm_recall','fmRecall')","('light_ranking','lrRank')"	
+				],
+				"recallNumLight"   :  100 ,
+				"preRankingNumLight" :10 
 			}
 		}
 	}

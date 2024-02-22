@@ -4,7 +4,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
-	io "infer-microservices/pkg/services/io"
+	io "infer-microservices/pkg/infer_services/io"
 	"time"
 )
 
