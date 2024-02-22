@@ -3,6 +3,7 @@ package service_config_loader
 import (
 	"infer-microservices/pkg/config_loader/faiss_config"
 	"infer-microservices/pkg/config_loader/model_config"
+	"infer-microservices/pkg/config_loader/pipeline_config"
 	"infer-microservices/pkg/config_loader/redis_config"
 )
 
@@ -17,18 +18,19 @@ func GetServiceConfigs() map[string]*ServiceConfig {
 }
 
 type ServiceConfig struct {
-	serviceId         string                         `validate:"required,unique,min=4,max=10"` //dataid
-	redisConfig       redis_config.RedisConfig       `validate:"required"`                     //redis conn info
-	faissIndexConfigs faiss_config.FaissIndexConfigs //index conn info
-	modelConfig       model_config.ModelConfig       `validate:"required"` //model conn info
+	serviceId         string                              `validate:"required,unique,min=4,max=10"` //dataid
+	redisConfig       redis_config.RedisConfig            `validate:"required"`                     //redis conn info
+	faissIndexConfigs faiss_config.FaissIndexConfigs      //index conn info
+	modelsConfig      map[string]model_config.ModelConfig `validate:"required"` //model conn info
+	pipelineCnfig     pipeline_config.PipelineConfig      `validate:"required"` //infer pipeline info
 }
 
 func init() {
 }
 
 // serviceId
-func (s *ServiceConfig) setServiceId(dataId string) {
-	s.serviceId = dataId
+func (s *ServiceConfig) setServiceId(serviceId string) {
+	s.serviceId = serviceId
 }
 
 func (s *ServiceConfig) GetServiceId() string {
@@ -54,10 +56,19 @@ func (s *ServiceConfig) GetFaissIndexConfigs() *faiss_config.FaissIndexConfigs {
 }
 
 // modelConfig
-func (s *ServiceConfig) setModelConfig(modelConfig model_config.ModelConfig) {
-	s.modelConfig = modelConfig
+func (s *ServiceConfig) setModelsConfig(modelsConfig map[string]model_config.ModelConfig) {
+	s.modelsConfig = modelsConfig
 }
 
-func (s *ServiceConfig) GetModelConfig() *model_config.ModelConfig {
-	return &s.modelConfig
+func (s *ServiceConfig) GetModelsConfig() map[string]model_config.ModelConfig {
+	return s.modelsConfig
+}
+
+// piplineCnfig
+func (s *ServiceConfig) setPipelineConfig(piplineCnfig pipeline_config.PipelineConfig) {
+	s.pipelineCnfig = piplineCnfig
+}
+
+func (s *ServiceConfig) GetPipelineConfig() *pipeline_config.PipelineConfig {
+	return &s.pipelineCnfig
 }

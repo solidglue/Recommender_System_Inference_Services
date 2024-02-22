@@ -34,8 +34,17 @@ func (b *ServiceConfigBuilder) FaissConfigBuilder(dataId string, indexConfStr st
 // model builder
 func (b *ServiceConfigBuilder) ModelConfigBuilder(dataId string, modelConfStr string) *ServiceConfigBuilder {
 	configFactory := &ConfigFactory{}
-	modelConfig := configFactory.createModelConfig(dataId, modelConfStr)
-	b.serviceConfig.setModelConfig(*modelConfig)
+	modelConfigs := configFactory.createModelConfig(dataId, modelConfStr)
+	b.serviceConfig.setModelsConfig(*modelConfigs)
+
+	return b
+}
+
+// pipeline builder
+func (b *ServiceConfigBuilder) PipelineConfigBuilder(dataId string, pipelineConfStr string) *ServiceConfigBuilder {
+	configFactory := &ConfigFactory{}
+	PipelineConfig := configFactory.createPipelineConfig(dataId, pipelineConfStr)
+	b.serviceConfig.setPipelineConfig(*PipelineConfig)
 
 	return b
 }
