@@ -85,3 +85,47 @@ func (m *InferRedisClient) HGetAll(key string) (map[string]string, error) {
 	}
 	return value, nil
 }
+
+// list
+func (m *InferRedisClient) Lrange(key string) ([]string, error) {
+	cmd := m.cli.LRange(ctx, key, 0, -1)
+	value, err := cmd.Result()
+	if err != nil {
+		return make([]string, 0), err
+	}
+
+	return value, nil
+}
+
+func (m *InferRedisClient) Lrem(key string, value string) error {
+	return m.cli.LRem(ctx, key, 0, value).Err()
+}
+
+func (m *InferRedisClient) Exists(key string) (bool, error) {
+	ok, err := m.cli.Exists(ctx, key).Result()
+	if err != nil {
+		return false, err
+	}
+
+	if ok == 1 {
+		return true, nil
+	} else {
+		return false, nil
+	}
+}
+
+// INFO: Expire shoud after Push
+func (m *InferRedisClient) LPush(key string, value string, expire time.Duration) error {
+	m.cli.LPush(ctx, key, value)
+	return m.cli.Expire(ctx, key, expire).Err()
+}
+
+func (m *InferRedisClient) RPush(key string, value string, expire time.Duration) error {
+	m.cli.RPush(ctx, key, value)
+	return m.cli.Expire(ctx, key, expire).Err()
+}
+
+// del
+func (m *InferRedisClient) Delete(key string) error {
+	return m.cli.Del(ctx, key).Err()
+}
