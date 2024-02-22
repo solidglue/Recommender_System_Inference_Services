@@ -24,7 +24,7 @@ The model inference microservices based on deep learning mainly uses the followi
 The core components of model inference microservices are as follows：
 | Type | Component | Description |
 | --- | --- | --- |
-| Feature | [feature engineering](https://github.com/solidglue/RecommenderSystems-Inference-Microservices/tree/master/pkg/infer_samples/feature) | user offline / user realtime / seq features, item features. |
+| Feature | [feature engineering](https://github.com/solidglue/RecommenderSystems-Inference-Microservices/tree/master/pkg/infer_samples/feature) | user offline、user realtime、user seq features and item features. |
 | Sample | [recall/rank samples](https://github.com/solidglue/RecommenderSystems-Inference-Microservices/tree/master/pkg/infer_samples) | create TFRcords format samples. |
 | Recall | [cf recall](https://github.com/solidglue/RecommenderSystems-Inference-Microservices/tree/master/pkg/infer_models/recall/cf) | user cf 、 item cf and swing.|
 |  | [dssm recall](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/pkg/infer_models/recall/dssm) | recall from dssm model and faiss index. |
