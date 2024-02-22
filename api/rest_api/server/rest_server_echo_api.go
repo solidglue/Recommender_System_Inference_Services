@@ -5,7 +5,7 @@ import (
 	"infer-microservices/internal"
 	"infer-microservices/internal/jwt"
 	"infer-microservices/internal/logs"
-	"infer-microservices/pkg/services/rest_service"
+	"infer-microservices/pkg/infer_services/rest_service"
 	"runtime"
 
 	"github.com/labstack/echo"

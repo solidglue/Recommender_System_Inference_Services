@@ -1,7 +1,7 @@
 package client
 
 import (
-	grpc_service "infer-microservices/pkg/services/grpc_service"
+	grpc_service "infer-microservices/pkg/infer_services/grpc_service"
 	"testing"
 )
 

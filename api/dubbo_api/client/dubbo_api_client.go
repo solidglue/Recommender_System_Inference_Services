@@ -4,7 +4,7 @@ import (
 	"context"
 	dubbo_api "infer-microservices/api/dubbo_api/server"
 	"infer-microservices/internal/logs"
-	"infer-microservices/pkg/services/io"
+	"infer-microservices/pkg/infer_services/io"
 
 	"dubbo.apache.org/dubbo-go/v3/config"
 	_ "dubbo.apache.org/dubbo-go/v3/imports"

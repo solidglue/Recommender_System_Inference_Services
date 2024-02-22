@@ -1,7 +1,7 @@
 package client
 
 import (
-	"infer-microservices/pkg/services/io"
+	"infer-microservices/pkg/infer_services/io"
 	"testing"
 )
 
@@ -12,12 +12,12 @@ func init() {
 }
 
 func TestDubboApiClient(t *testing.T) {
-	itemList := []string{"1001", "1002", "1003", "1004"}
+	//itemList := []string{"1001", "1002", "1003", "1004"}
 
 	req := io.RecRequest{}
 	req.SetDataId("$dataid|$groupid") //nacos dataid|groupid
 	req.SetUserId("$userid")          //userid
-	req.SetItemList(itemList)         //rank items
+	//req.SetItemList(itemList)         //rank items
 
 	dubboApiClient := DubboApiClient{}
 	dubboApiClient.setDubboConfigFile(dubboConfigFile)

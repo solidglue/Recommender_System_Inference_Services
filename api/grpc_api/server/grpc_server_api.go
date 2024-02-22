@@ -3,7 +3,7 @@ package server
 import (
 	"fmt"
 	"infer-microservices/internal/logs"
-	grpc_service "infer-microservices/pkg/services/grpc_service"
+	grpc_service "infer-microservices/pkg/infer_services/grpc_service"
 	"net"
 	"runtime"
 

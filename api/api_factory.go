@@ -5,14 +5,14 @@ import (
 	grpc_api "infer-microservices/api/grpc_api/server"
 	rest_api "infer-microservices/api/rest_api/server"
 	"infer-microservices/internal/flags"
-	"infer-microservices/pkg/services"
+	infer_services "infer-microservices/pkg/infer_services"
 )
 
 var restPort uint
 var grpcPort uint
 var maxCpuNum int
 var dubboConfFile string
-var serviceFactory services.ServiceFactory
+var serviceFactory infer_services.ServiceFactory
 
 type ApiFactory struct {
 }

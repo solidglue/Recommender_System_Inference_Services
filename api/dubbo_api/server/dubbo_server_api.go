@@ -3,8 +3,8 @@ package server
 import (
 	"context"
 	"infer-microservices/internal/logs"
-	dubbo_service "infer-microservices/pkg/services/dubbo_service"
-	"infer-microservices/pkg/services/io"
+	dubbo_service "infer-microservices/pkg/infer_services/dubbo_service"
+	"infer-microservices/pkg/infer_services/io"
 	"time"
 
 	"dubbo.apache.org/dubbo-go/v3/config"

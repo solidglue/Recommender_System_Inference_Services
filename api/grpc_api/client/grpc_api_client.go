@@ -2,7 +2,7 @@ package client
 
 import (
 	"infer-microservices/internal/logs"
-	grpc_service "infer-microservices/pkg/services/grpc_service"
+	grpc_service "infer-microservices/pkg/infer_services/grpc_service"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
