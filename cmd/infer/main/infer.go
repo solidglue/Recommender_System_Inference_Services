@@ -3,11 +3,13 @@ package main
 import (
 	"flag"
 	"infer-microservices/api"
-	"infer-microservices/internal"
 	"infer-microservices/internal/logs"
-	"infer-microservices/pkg/model/basemodel"
+	"infer-microservices/pkg/infer_samples"
 	"time"
 )
+
+//TODO:需要注意指针的滥用，协程里一个局部变量的改变是否会影响另一个协程中的变量。看看地址是否一样
+//验证表明，局部变量地址不一样
 
 var apiFactory api.ApiFactory
 
@@ -23,8 +25,8 @@ func resetBloom() {
 
 	for t := range ticker.C {
 		logs.Info("Start to reset bloom filter.", t)
-		internal.CleanBloom(internal.GetUserBloomFilterInstance())
-		internal.CleanBloom(internal.GetItemBloomFilterInstance())
+		infer_samples.BloomClean(infer_samples.GetUserBloomFilterInstance())
+		infer_samples.BloomClean(infer_samples.GetItemBloomFilterInstance())
 	}
 }
 
@@ -41,8 +43,8 @@ func main() {
 	logs.InitLog()
 
 	//watch and reset bloom fliter
-	go basemodel.WatchBloomConfig() //0 o'clock start service and load all users and all items into bloom filter.
-	go resetBloom()                 //0 o'clock clean bloom filter, every 7 days.
+	go infer_samples.WatchBloomConfig() //0 o'clock start service and load all users and all items into bloom filter.
+	go resetBloom()                     //0 o'clock clean bloom filter, every 7 days.
 
 	//start services.
 	dubboServiceApi := apiFactory.CreateDubboServiceApi()
