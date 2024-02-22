@@ -37,9 +37,9 @@ The core components of model inference microservices are as follows：
 |  | [dubbo service](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/blob/master/pkg/infer_services/dubbo_service) | dubbo protocol service. |
 |  | [gRPC service](https://github.com/solidglue/RecommenderSystems-Inference-Microservices/tree/master/pkg/infer_services/grpc_service) | grpc protocol service. |
 |  | [rest service](https://github.com/solidglue/RecommenderSystems-Inference-Microservices/tree/master/pkg/infer_services/rest_service) | restful service. |
-|APIs| [dubbo api](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/api/dubbo_api) |Provide Dubbo protocol APIs. |
-|| [gRPC api](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/api/grpc_api) |provide gRPC protocol APIs. |
-|| [rest api](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/api/rest_api) |provide Http protocol APIs. |
+|APIs| [dubbo api](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/api/dubbo_api) |provide dubbo protocol api. |
+|| [gRPC api](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/api/grpc_api) |provide gRPC protocol api. |
+|| [rest api](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/api/rest_api) |provide http protocol api. |
 |Web| [web](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/pkg/web) |services manage and Service monitor page. |
 |Deploy| [faiss](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/scripts/deployments/faiss) |faiss index service deploy. |
 || [tfserving](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/scripts/deployments/tfserving) |tensorflow model deploy. |
