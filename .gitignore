@@ -1,0 +1,8 @@
+#ignore
+search_recall
+test
+logs
+cache
+*.txt
+*.log
+web
