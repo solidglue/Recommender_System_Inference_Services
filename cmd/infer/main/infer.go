@@ -8,9 +8,6 @@ import (
 	"time"
 )
 
-//TODO:需要注意指针的滥用，协程里一个局部变量的改变是否会影响另一个协程中的变量。看看地址是否一样
-//验证表明，局部变量地址不一样
-
 var apiFactory api.ApiFactory
 
 func init() {

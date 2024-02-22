@@ -30,10 +30,7 @@ func init() {
 	// SampleCallBackFuncMap["rank"] = basemodel0.GetInferExampleFeaturesContainItems
 }
 
-// 监听配置文件-实时更新活跃用户/节目id，改成kafka更好。此处为文件。
-//一旦用户或节目有更新，立刻通知观察者们更新布隆过滤器。
-//此处流程与推理流程独立。也可以边推理边检查，有特征就写入过滤器。但是更新可能没那么及时
-
+// TODO:listen kafka,not file.
 func loadViperConfigFile() {
 	err := viperConfig.ReadInConfig()
 	if err != nil {

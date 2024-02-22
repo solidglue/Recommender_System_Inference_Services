@@ -28,12 +28,11 @@ type EchoServiceApi struct {
 func init() {
 	echoApi = echo.New()
 	echoApi.Debug = true
-	echoApi.Use(middleware.Recover()) // 主要用于拦截panic错误并且在控制台打印错误日志，避免echo程序直接崩溃
-	echoApi.Use(middleware.Logger())  // Logger中间件主要用于打印http请求日志
+	echoApi.Use(middleware.Recover())
+	echoApi.Use(middleware.Logger())
 	echoApi.Use(middleware.RequestID())
 }
 
-// 全局使用echo对象
 func GetEcho() *echo.Echo {
 	return echoApi
 }

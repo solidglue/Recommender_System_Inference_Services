@@ -1,18 +1,3 @@
-// 异步文件日志
-// 使用方法:
-//
-//  1. 初始化
-//     logs.InitLog("../log/test.log", 1000000000, 2) // 初始化
-//     logs.SetLevel(logs.LevelDebug) //设置日志等级, 默认是Info级别
-//
-//  2. 打印日志
-//     logs.Debug("debug")
-//     logs.Info("info")
-//     logs.Error("error")
-//     logs.Fatal("fatal")
-//
-//  3. 进程退出时需要关闭日志，否则会有些日志打印不全
-//     logs.CloseLog()
 package logs
 
 import (
@@ -28,12 +13,6 @@ import (
 const asyncLogBuffer = 1000
 
 var once sync.Once
-
-// 初始化配置为mixture的log配置
-// filename: 日志文件名称，可以为绝对路径或者相对路径，名称建议.log 结尾,
-//           文件所在的目录路径需要存在
-// maxSize: 单个日志文件最大大小，单位B
-// maxDays: 日志文件最多保留多少天
 
 func InitLogParam(file_name string, log_level string) error {
 	once.Do(func() {
@@ -56,7 +35,6 @@ func InitLogParam(file_name string, log_level string) error {
 
 		lb := GetBeeLogger()
 
-		// 默认写文件
 		fileLogConfig := fmt.Sprintf(`{"filename":"%v","maxsize":%v,
                 "daily":true,"maxdays":%v, "rotate":true,
                 "level":%v,"perm": "0666","separate":["error", "warning", "info", "debug"]}`,
@@ -66,14 +44,9 @@ func InitLogParam(file_name string, log_level string) error {
 			panic("Logs module Init Failed")
 		}
 
-		// 默认Info级别
 		lb.SetLevel(logLevel)
 		lb.SetLogFuncCallDepth(3)
-
-		// 只输出文件名
 		lb.SetShortFile(true)
-
-		// 异步写log
 		lb.Async(asyncLogBuffer)
 	})
 	return nil
@@ -96,7 +69,6 @@ func InitLog() error {
 
 		// lb := GetBeeLogger()
 
-		// // 默认写文件
 		// fileLogConfig := fmt.Sprintf(`{"filename":"%v","maxsize":%v,
 		//         "daily":true,"maxdays":%v, "rotate":true,
 		//         "level":%v,"perm": "0666","separate":["error", "warning", "info", "debug"]}`,
@@ -106,26 +78,19 @@ func InitLog() error {
 		// 	panic("Logs module Init Failed")
 		// }
 
-		// // 默认Info级别
 		// lb.SetLevel(logLevel)
 		// lb.SetLogFuncCallDepth(3)
-
-		// // 只输出文件名
 		// lb.SetShortFile(true)
-
-		// // 异步写log
 		// lb.Async(asyncLogBuffer)
 	})
 	return nil
 }
 
-// 关闭 log，等同 Close。进程退出时需要关闭日志，否则会有些日志打印不全
 func CloseLog() {
 	GetBeeLogger().Close()
 	beeLogger = NewLogger()
 }
 
-// 关闭 log，等同 CloseLog。进程退出时需要关闭日志，否则会有些日志打印不全
 func Close() {
 	beeLogger.Close()
 	beeLogger = NewLogger()

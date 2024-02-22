@@ -1,4 +1,4 @@
 package heavy_ranker
 
-//长期序列
+//long seq
 //https://arxiv.org/abs/2006.05639

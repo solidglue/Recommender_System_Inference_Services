@@ -5,7 +5,6 @@ import (
 	"infer-microservices/internal/utils"
 )
 
-// TODO:样本分离，召回、粗排、精排可能用不一样的样本。或者配置哪个用哪些样本，如果每个模型都按照example预存储redis，存储量较大。暂时按照预存redis方案，用空间换时间
 type ModelConfig struct {
 	modelName          string             `validate:"required,unique,min=4,max=10"` //model name, dssm 、 deepfm
 	modelType          string             `validate:"required,unique,min=4,max=10"` //recall 、rank
@@ -15,7 +14,7 @@ type ModelConfig struct {
 	userRedisKeyPreOffline  string   `validate:"required,min=4,max=10"` //user offline feature redis key pre.
 	userRedisKeyPreRealtime string   `validate:"required,min=4,max=10"` //user Realtime feature redis key pre.
 	itemRedisKeyPre         string   `validate:"required,min=4,max=10"` //item feature redis key pre.
-	featureList             []string // 召回、粗排、精排等，根据features list选特征
+	featureList             []string 
 }
 
 func init() {

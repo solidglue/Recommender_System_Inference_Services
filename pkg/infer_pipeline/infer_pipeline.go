@@ -10,10 +10,6 @@ import (
 
 //https://developer.aliyun.com/article/1065404
 
-//把样本、召回、粗排、精排、重排等串成一个工作流
-
-//各个模型需要实现统一的接口，infer。服务通过pipline调用模型
-
 type Pipeline struct {
 	steps []inferAlgMap
 }
@@ -23,12 +19,10 @@ type inferAlgMap struct {
 	algFunc InferPipelineInterface //sample class ,or model class
 }
 
-// TODO: 将steps字符串转化为steps
 func (p Pipeline) SetSteps(steps []string) {
 	//p.steps = steps
 }
 
-// TODO:策略模式
 // steps :[("sample",inferSampleDirector.RecallSampleDirector),("recall",RecallSampleDirector),("pre_ranking",RecallSampleDirector),("re_rank",RecallSampleDirector)],
 func (p Pipeline) Predict(serviceConfig *config_loader.ServiceConfig, requestId string, userId string, r *http.Request, lightInfer bool) (map[string][]map[string]interface{}, error) {
 	var err error
@@ -46,8 +40,6 @@ func (p Pipeline) Predict(serviceConfig *config_loader.ServiceConfig, requestId 
 	rankingItemIdList := make([]string, 0)
 
 	for index, step := range p.steps {
-		//TODO:所有的推理模型和样本，需要实现一个infer接口
-
 		//1.RECALL
 		//recall sample
 		if strings.Contains(step.algName, "recall_sample") {
