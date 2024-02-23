@@ -1,5 +1,5 @@
 # RecommenderSystems Inference Microservices
-    Deep Learning Recommender Systems Inference Microsevices for Golang.
+    Deep Learning Recommender Systems Inference Microsevices base on TFServing、Faiss and Golang.
 
 ## Dependent Components    
 The model inference microservices based on deep learning mainly uses the following components:
