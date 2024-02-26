@@ -30,9 +30,9 @@ The core components of model inference microservices are as follows：
 |  | [dssm recall](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/pkg/infer_models/recall/dssm) | recall from dssm model and faiss index. |
 |  | [rules recall](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/pkg/infer_models/recall/rules_recall) | rules recall, such as hot items recall. |
 |  | [cold start](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/pkg/infer_models/recall/cold_start) | new users and new items cold start. |
-| Rank | [pre_ranking](https://github.com/solidglue/RecommenderSystems-Inference-Microservices/tree/master/pkg/infer_model/pre_ranking)  |  thousands items pre_ranking after recall . |
-|  | [ranking](https://github.com/solidglue/RecommenderSystems-Inference-Microservices/tree/master/pkg/infer_model/ranking)  | hundreds items ranking after pre_ranking. |
-|  | [re_ranking](https://github.com/solidglue/RecommenderSystems-Inference-Microservices/tree/master/pkg/infer_model/re_ranking)  |  hundreds items re_ranking after ranking . |
+| Rank | [pre_ranking](https://github.com/solidglue/RecommenderSystems-Inference-Microservices/tree/master/pkg/infer_models/pre_ranking)  |  thousands items pre_ranking after recall . |
+|  | [ranking](https://github.com/solidglue/RecommenderSystems-Inference-Microservices/tree/master/pkg/infer_models/ranking)  | hundreds items ranking after pre_ranking. |
+|  | [re_ranking](https://github.com/solidglue/RecommenderSystems-Inference-Microservices/tree/master/pkg/infer_models/re_ranking)  |  hundreds items re_ranking after ranking . |
 | Services | [config loader](https://github.com/solidglue/RecommenderSystems-Inference-Microservices/tree/master/pkg/config_loader) | Sparse service's start config from Naocs, such as grpc info 、 redis info and index info. |
 |  | [dubbo service](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/blob/master/pkg/infer_services/dubbo_service) | dubbo protocol service. |
 |  | [gRPC service](https://github.com/solidglue/RecommenderSystems-Inference-Microservices/tree/master/pkg/infer_services/grpc_service) | grpc protocol service. |
