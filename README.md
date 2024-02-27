@@ -2,7 +2,7 @@
  Large Scale Deep Learning Recommender Systems Inference Services / Microservices base on TFServing、Faiss 、Redis、Dubbo、Nacos、gRPC and Golang. 
  This system provides real-time inference services(Dubbo api、gPRC api and REST api),which can withstand millions of inference requests per day.
 
- 
+
 ## Dependent Components    
 The model inference microservices based on deep learning mainly uses the following components:
 | Type | Component | Description |
@@ -19,7 +19,6 @@ The model inference microservices based on deep learning mainly uses the followi
 |Deploy| Docker  | Docker containerization deployment services. |
 || Kubernetes  | Manage dockers and monitor the resource consumption of each service, such as memory and CPUs. |
 ||  Nginx、Apisix | API gateway. |
-
 
 
 ## Architecture
@@ -48,10 +47,9 @@ The core components of model inference microservices are as follows：
 || [infer](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/scripts/deployments/infer) |recommend system infer deploy. |
 
 
-
-
 ## Services Deploy
     Docker
     Kubernetes 
     Nginx
     Apisix
+    ELK
