@@ -11,7 +11,7 @@ The model inference microservices based on deep learning mainly uses the followi
 || Redis |  Save the training samples in TFRecord format and store them in Redis Cluster. |
 | Model | TensorFlow | Training deep learning recall / rank model , alse you can use other deep learning framework ,but need save models as *.pb format. |
 || TensorFlow Serving | Deploy models and provide a grpc service. |
-||FAISS | Quick search thousands items from millions items. |
+||FAISS | Quick ANN search thousands items from millions items. |
 | Microservices | Nacos | Manage config files and services. |
 || Dubbo | Build dubbo protocol RPC services and register them to Nacos. |
 || Hystrix | How to distribute traffic during peak traffic (Latency and Fault Tolerance). |
