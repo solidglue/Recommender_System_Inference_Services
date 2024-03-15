@@ -2,7 +2,8 @@ package infer_pipeline
 
 import (
 	config_loader "infer-microservices/pkg/config_loader"
-	"infer-microservices/pkg/infer_samples/feature"
+	feature "infer-microservices/pkg/infer_features"
+	"infer-microservices/pkg/infer_services/io"
 
 	"net/http"
 	"strings"
@@ -24,7 +25,7 @@ func (p Pipeline) SetSteps(steps []string) {
 }
 
 // steps :[("sample",inferSampleDirector.RecallSampleDirector),("recall",RecallSampleDirector),("pre_ranking",RecallSampleDirector),("re_rank",RecallSampleDirector)],
-func (p Pipeline) Predict(serviceConfig *config_loader.ServiceConfig, requestId string, userId string, r *http.Request, lightInfer bool) (map[string][]map[string]interface{}, error) {
+func (p Pipeline) Predict(serviceConfig *config_loader.ServiceConfig, requestId string, in *io.RecRequest, r *http.Request, lightInfer bool) (map[string][]map[string]interface{}, error) {
 	var err error
 	recallSample := feature.ExampleFeatures{}
 	preRankingSample := feature.ExampleFeatures{}
@@ -39,6 +40,9 @@ func (p Pipeline) Predict(serviceConfig *config_loader.ServiceConfig, requestId 
 	preRankingItemIdList := make([]string, 0)
 	rankingItemIdList := make([]string, 0)
 
+	userId := in.GetUserId()
+	exposureList := in.GetExposureList()
+
 	for index, step := range p.steps {
 		//1.RECALL
 		//recall sample
@@ -50,7 +54,7 @@ func (p Pipeline) Predict(serviceConfig *config_loader.ServiceConfig, requestId 
 			}
 		}
 		//recall infer
-		recallResponse, err = p.recall(serviceConfig, step, requestId, r, recallSample, lightInfer)
+		recallResponse, err = p.recall(serviceConfig, step, requestId, exposureList, r, recallSample, lightInfer)
 		//return the last model in pipeline.
 		if index == len(p.steps)-1 {
 			return recallResponse, nil
@@ -69,7 +73,8 @@ func (p Pipeline) Predict(serviceConfig *config_loader.ServiceConfig, requestId 
 			}
 		}
 		//prerank infer
-		prerankingResponse, err = p.rank(serviceConfig, step, requestId, r, preRankingSample, lightInfer)
+		exposureList_ := make([]string, 0) //ranking not filter items. because items have been filtered at recall stage.
+		prerankingResponse, err = p.rank(serviceConfig, step, requestId, exposureList_, r, preRankingSample, lightInfer)
 		//return the last model in pipeline.
 		if index == len(p.steps)-1 {
 			return prerankingResponse, nil
@@ -80,15 +85,15 @@ func (p Pipeline) Predict(serviceConfig *config_loader.ServiceConfig, requestId 
 		for _, itemid := range prerankingResponse["data"] {
 			preRankingItemIdList = append(preRankingItemIdList, itemid["itemid"].(string))
 		}
-		//prerank samples
+		//ranking samples
 		if strings.Contains(step.algName, "ranking_sample") && !strings.Contains(step.algName, "preranking_sample") {
 			rankingSample, err = p.inferSample(serviceConfig, step, requestId, userId, r, recallItemIdList)
 			if err != nil {
 				return reRankResponse, err
 			}
 		}
-		//prerank infer
-		rankingResponse, err = p.rank(serviceConfig, step, requestId, r, rankingSample, lightInfer) //return all the preranking items
+		//ranking infer
+		rankingResponse, err = p.rank(serviceConfig, step, requestId, exposureList_, r, rankingSample, lightInfer) //return all the preranking items
 		//return the last model in pipeline.
 		if index == len(p.steps)-1 {
 			return rankingResponse, nil
@@ -146,7 +151,7 @@ func (p Pipeline) inferSample(serviceConfig *config_loader.ServiceConfig, step i
 }
 
 // RECALL  TFSERVING INFER
-func (p Pipeline) recall(serviceConfig *config_loader.ServiceConfig, step inferAlgMap, requestId string, r *http.Request, recallSample feature.ExampleFeatures, lightInfer bool) (map[string][]map[string]interface{}, error) {
+func (p Pipeline) recall(serviceConfig *config_loader.ServiceConfig, step inferAlgMap, requestId string, exposureList []string, r *http.Request, recallSample feature.ExampleFeatures, lightInfer bool) (map[string][]map[string]interface{}, error) {
 	var err error
 	recallResponse := make(map[string][]map[string]interface{}, 0)
 	modelsConf := serviceConfig.GetModelsConfig()
@@ -154,19 +159,19 @@ func (p Pipeline) recall(serviceConfig *config_loader.ServiceConfig, step inferA
 
 	recallNum := 100
 	if lightInfer {
-		recallNum = int(pipelineConf.GetRecallNum())
+		recallNum = int(pipelineConf.GetRecallNum()) + len(exposureList)
 	} else {
-		recallNum = int(pipelineConf.GetRecallNumLight())
+		recallNum = int(pipelineConf.GetRecallNumLight()) + len(exposureList)
 	}
 
 	if strings.Contains(step.algName, "recall_skywalking") {
-		recallResponse, err = step.algFunc.ModelInferSkywalking(modelsConf[step.algName], requestId, r, recallSample, recallNum)
+		recallResponse, err = step.algFunc.ModelInferSkywalking(modelsConf[step.algName], requestId, exposureList, r, recallSample, recallNum)
 		if err != nil {
 			return recallResponse, err
 		}
 
 	} else if strings.Contains(step.algName, "recall_noskywalking") {
-		recallResponse, err = step.algFunc.ModelInferNoSkywalking(modelsConf[step.algName], requestId, recallSample, recallNum)
+		recallResponse, err = step.algFunc.ModelInferNoSkywalking(modelsConf[step.algName], requestId, exposureList, recallSample, recallNum)
 		if err != nil {
 			return recallResponse, err
 		}
@@ -178,9 +183,9 @@ func (p Pipeline) recall(serviceConfig *config_loader.ServiceConfig, step inferA
 }
 
 // RANKING，RANKING  TFSERVING INFER
-func (p Pipeline) rank(serviceConfig *config_loader.ServiceConfig, step inferAlgMap, requestId string, r *http.Request, recallSample feature.ExampleFeatures, lightInfer bool) (map[string][]map[string]interface{}, error) {
+func (p Pipeline) rank(serviceConfig *config_loader.ServiceConfig, step inferAlgMap, requestId string, exposureList []string, r *http.Request, recallSample feature.ExampleFeatures, lightInfer bool) (map[string][]map[string]interface{}, error) {
 	var err error
-	recallResponse := make(map[string][]map[string]interface{}, 0)
+	rankResponse := make(map[string][]map[string]interface{}, 0)
 	modelsConf := serviceConfig.GetModelsConfig()
 	pipelineConf := serviceConfig.GetPipelineConfig()
 
@@ -192,21 +197,21 @@ func (p Pipeline) rank(serviceConfig *config_loader.ServiceConfig, step inferAlg
 	}
 
 	if strings.Contains(step.algName, "ranking_skywalking") {
-		recallResponse, err = step.algFunc.ModelInferSkywalking(modelsConf[step.algName], requestId, r, recallSample, rankNum)
+		rankResponse, err = step.algFunc.ModelInferSkywalking(modelsConf[step.algName], requestId, exposureList, r, recallSample, rankNum)
 		if err != nil {
-			return recallResponse, err
+			return rankResponse, err
 		}
 
 	} else if strings.Contains(step.algName, "ranking_noskywalking") {
-		recallResponse, err = step.algFunc.ModelInferNoSkywalking(modelsConf[step.algName], requestId, recallSample, rankNum)
+		rankResponse, err = step.algFunc.ModelInferNoSkywalking(modelsConf[step.algName], requestId, exposureList, recallSample, rankNum)
 		if err != nil {
-			return recallResponse, err
+			return rankResponse, err
 		}
 	} else {
 		// support more models.
 	}
 
-	return recallResponse, nil
+	return rankResponse, nil
 }
 
 func (p Pipeline) re_rank(step inferAlgMap, requestId string, rankingItemIdList []string) (map[string][]map[string]interface{}, error) {

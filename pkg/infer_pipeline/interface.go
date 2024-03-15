@@ -2,7 +2,7 @@ package infer_pipeline
 
 import (
 	"infer-microservices/pkg/config_loader/model_config"
-	"infer-microservices/pkg/infer_samples/feature"
+	feature "infer-microservices/pkg/infer_features"
 	"net/http"
 )
 
@@ -12,6 +12,6 @@ type InferPipelineInterface interface {
 	RankingSampleDirector(userId string, offlineFeature bool, onlineFeature bool, itemIdList []string, featureList []string) (feature.ExampleFeatures, error)
 
 	//infer
-	ModelInferSkywalking(model model_config.ModelConfig, requestId string, r *http.Request, inferSample feature.ExampleFeatures, retNum int) (map[string][]map[string]interface{}, error)
-	ModelInferNoSkywalking(model model_config.ModelConfig, requestId string, inferSample feature.ExampleFeatures, retNum int) (map[string][]map[string]interface{}, error)
+	ModelInferSkywalking(model model_config.ModelConfig, requestId string, exposureList []string, r *http.Request, inferSample feature.ExampleFeatures, retNum int) (map[string][]map[string]interface{}, error)
+	ModelInferNoSkywalking(model model_config.ModelConfig, requestId string, exposureList []string, inferSample feature.ExampleFeatures, retNum int) (map[string][]map[string]interface{}, error)
 }
