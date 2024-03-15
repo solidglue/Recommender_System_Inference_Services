@@ -1,4 +1,4 @@
-package dssm
+package u2i
 
 import (
 	"encoding/json"
@@ -9,11 +9,13 @@ import (
 	"infer-microservices/pkg/ann/faiss"
 	"infer-microservices/pkg/config_loader/faiss_config"
 	"infer-microservices/pkg/config_loader/model_config"
+	feature "infer-microservices/pkg/infer_features"
 	"infer-microservices/pkg/infer_models/base_model"
-	"infer-microservices/pkg/infer_samples/feature"
 	"net/http"
 	"time"
 )
+
+//INFO: user to item DSSM model, used to calculate user & item similarity.
 
 type Dssm struct {
 	baseModel base_model.BaseModel // extend baseModel
@@ -43,7 +45,7 @@ func (d *Dssm) GetModelType() string {
 	return d.modelType
 }
 
-func (d *Dssm) ModelInferSkywalking(model model_config.ModelConfig, requestId string, r *http.Request, inferSample feature.ExampleFeatures, retNum int) (map[string][]map[string]interface{}, error) {
+func (d *Dssm) ModelInferSkywalking(model model_config.ModelConfig, requestId string, exposureList []string, r *http.Request, inferSample feature.ExampleFeatures, retNum int) (map[string][]map[string]interface{}, error) {
 	response := make(map[string][]map[string]interface{}, 0)
 	cacheKeyPrefix := requestId + d.baseModel.GetServiceConfig().GetServiceId() + d.baseModel.GetModelName() + d.baseModel.GetTensorName()
 	// get rsp from cache.
@@ -110,7 +112,7 @@ loop:
 	spanUnionEmOut.SetOperationName("get recall result func")
 
 	spanUnionEmOut.Log(time.Now())
-	recallRst, err := d.baseModel.InferResultFormat(&mergeResult)
+	recallRst, err := d.baseModel.InferResultFormat(&mergeResult, exposureList)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +131,7 @@ loop:
 	return response, nil
 }
 
-func (d *Dssm) ModelInferNoSkywalking(model model_config.ModelConfig, requestId string, inferSample feature.ExampleFeatures, retNum int) (map[string][]map[string]interface{}, error) {
+func (d *Dssm) ModelInferNoSkywalking(model model_config.ModelConfig, requestId string, exposureList []string, inferSample feature.ExampleFeatures, retNum int) (map[string][]map[string]interface{}, error) {
 	response := make(map[string][]map[string]interface{}, 0)
 	cacheKeyPrefix := requestId + d.baseModel.GetServiceConfig().GetServiceId() + d.baseModel.GetModelName() + d.baseModel.GetTensorName()
 	// get rsp from cache.
@@ -178,7 +180,7 @@ loop:
 	close(recallCh)
 
 	//format result.
-	recallRst, err := d.baseModel.InferResultFormat(&mergeResult)
+	recallRst, err := d.baseModel.InferResultFormat(&mergeResult, exposureList)
 	if err != nil {
 		return nil, err
 	}

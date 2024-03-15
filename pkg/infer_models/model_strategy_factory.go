@@ -3,10 +3,10 @@ package infer_model
 import (
 	config_loader "infer-microservices/pkg/config_loader"
 	"infer-microservices/pkg/config_loader/model_config"
+	feature "infer-microservices/pkg/infer_features"
 	"infer-microservices/pkg/infer_models/base_model"
 	"infer-microservices/pkg/infer_models/ranking/heavy_ranker"
-	"infer-microservices/pkg/infer_models/recall/dssm"
-	"infer-microservices/pkg/infer_samples/feature"
+	dssm "infer-microservices/pkg/infer_models/recall/u2i"
 	"net/http"
 )
 
@@ -16,8 +16,8 @@ var modelStrategyMap map[string]ModelStrategyInterface
 type ModelStrategyInterface interface {
 	//model infer.
 	GetModelType() string
-	ModelInferSkywalking(model model_config.ModelConfig, requestId string, r *http.Request, inferSample feature.ExampleFeatures, retNum int) (map[string][]map[string]interface{}, error)
-	ModelInferNoSkywalking(model model_config.ModelConfig, requestId string, inferSample feature.ExampleFeatures, retNum int) (map[string][]map[string]interface{}, error)
+	ModelInferSkywalking(model model_config.ModelConfig, requestId string, exposureList []string, r *http.Request, inferSample feature.ExampleFeatures, retNum int) (map[string][]map[string]interface{}, error)
+	ModelInferNoSkywalking(model model_config.ModelConfig, requestId string, exposureList []string, inferSample feature.ExampleFeatures, retNum int) (map[string][]map[string]interface{}, error)
 }
 
 type ModelStrategyFactory struct {
@@ -49,11 +49,11 @@ func (m *ModelStrategyFactory) CreateModelStrategy(modelName string, serverConn 
 	modelStrategyMap["dssm"] = dssmModel
 	//	tensorName := "user_embedding"
 
-	//deepfm model
-	deepfmModel := &heavy_ranker.DeepFM{}
-	deepfmModel.SetBaseModel(*baseModel)
-	deepfmModel.SetModelType("rank")
-	modelStrategyMap["deepfm"] = deepfmModel
+	//DIN model
+	DINModel := &heavy_ranker.DIN{}
+	DINModel.SetBaseModel(*baseModel)
+	DINModel.SetModelType("rank")
+	modelStrategyMap["DIN"] = DINModel
 	//	tensorName := "scores"
 
 	// modelStrategyMap["lr"] = lrModel

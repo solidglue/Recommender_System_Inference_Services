@@ -2,7 +2,7 @@ package faiss
 
 import (
 	"context"
-	"infer-microservices/pkg/infer_samples/feature"
+	feature "infer-microservices/pkg/infer_features"
 
 	faiss_index "infer-microservices/internal/faiss_gogofaster"
 	"infer-microservices/internal/flags"

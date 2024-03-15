@@ -4,13 +4,17 @@ import (
 	"infer-microservices/internal/flags"
 	"infer-microservices/internal/logs"
 	config_loader "infer-microservices/pkg/config_loader"
-	"infer-microservices/pkg/infer_samples/feature"
+	feature "infer-microservices/pkg/infer_features"
 
 	"time"
 
 	"github.com/allegro/bigcache"
 	bloomv3 "github.com/bits-and-blooms/bloom/v3"
 )
+
+
+//INFO:solution-A : All tfrecored format samples have been preprocessed and stored in Redis
+
 
 var bigCacheConfSample bigcache.Config
 var lifeWindowS time.Duration

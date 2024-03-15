@@ -134,13 +134,15 @@ func (s *BaseService) RecommenderInferHystrix(r *http.Request, serverName string
 	return response, nil
 }
 
-// TODO:此处通过pipeline访问推理
+// pipeline
 func (s *BaseService) modelInfer(r *http.Request, in *io.RecRequest, serviceConfig *config_loader.ServiceConfig, pipeline infer_pipeline.Pipeline, lightInfer bool) (map[string]interface{}, error) {
 	response := make(map[string]interface{}, 0)
 	requestId := utils.CreateRequestId(in)
 
+    //add filter exposure items
 	//pipeline infer
-	result, err := pipeline.Predict(serviceConfig, requestId, in.GetUserId(), r, lightInfer)
+	//result, err := pipeline.Predict(serviceConfig, requestId, in.GetUserId(), r, lightInfer)
+	result, err := pipeline.Predict(serviceConfig, requestId, in, r, lightInfer)
 	if err != nil {
 		return response, err
 	}

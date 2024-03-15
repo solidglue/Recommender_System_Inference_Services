@@ -5,9 +5,11 @@ import (
 	"infer-microservices/internal/logs"
 	"infer-microservices/internal/utils"
 	"infer-microservices/pkg/config_loader/model_config"
-	"infer-microservices/pkg/infer_samples/feature"
+	feature "infer-microservices/pkg/infer_features"
 	"net/http"
 )
+
+//TODO: add new solution-B：Query 、process and build tfrecord samples during inference.
 
 type InferSampleDirector struct {
 	inferSampleBuilder InferSampleBuilder
@@ -97,6 +99,12 @@ func (s *InferSampleDirector) RankingSampleDirector(model model_config.ModelConf
 	s.inferSampleBuilder.inferSample.bigCacheSample.Set(cacheKeyPrefix, []byte(utils.ConvertStructToJson(exampleData)))
 
 	return exampleData, nil
+}
+
+// TODO: add new solution-B：Query 、process and build tfrecord samples during inference.
+// includs recall and ranking sample generation.
+func (s *InferSampleDirector) GenerateSampleDirector() {
+	//
 }
 
 func (s *InferSampleDirector) ModelInferSkywalking(model model_config.ModelConfig, requestId string, r *http.Request, inferSample feature.ExampleFeatures, retNum int) (map[string][]map[string]interface{}, error) {

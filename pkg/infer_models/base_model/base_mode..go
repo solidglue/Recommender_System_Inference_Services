@@ -11,7 +11,7 @@ import (
 	"infer-microservices/internal/utils"
 	config_loader "infer-microservices/pkg/config_loader"
 	"infer-microservices/pkg/config_loader/model_config"
-	"infer-microservices/pkg/infer_samples/feature"
+	feature "infer-microservices/pkg/infer_features"
 	"time"
 
 	"github.com/allegro/bigcache"
@@ -233,17 +233,21 @@ func (b *BaseModel) requestTfservering(model model_config.ModelConfig, userExamp
 	return &predictOut.FloatVal, nil
 }
 
-func (b *BaseModel) InferResultFormat(recallResult *[]*faiss_index.ItemInfo) (*[]map[string]interface{}, error) {
+func (b *BaseModel) InferResultFormat(recallResult *[]*faiss_index.ItemInfo, exposureList []string) (*[]map[string]interface{}, error) {
 	recall := make([]map[string]interface{}, 0)
 	resultCh := make(chan map[string]interface{}, len(*recallResult))
 
 	for idx := 0; idx < len(*recallResult); idx++ {
 		rawCell := (*recallResult)[idx]
 		go func(raw_cell_ *faiss_index.ItemInfo) {
-			returnCell := make(map[string]interface{})
-			returnCell["itemid"] = raw_cell_.ItemId
-			returnCell["score"] = utils.FloatRound(raw_cell_.Score, 4)
-			resultCh <- returnCell
+
+			if contains(exposureList, raw_cell_.ItemId) == false {
+				returnCell := make(map[string]interface{})
+				returnCell["itemid"] = raw_cell_.ItemId
+				returnCell["score"] = utils.FloatRound(raw_cell_.Score, 4)
+				resultCh <- returnCell
+			}
+
 		}(rawCell)
 	}
 
@@ -259,4 +263,14 @@ loop:
 	close(resultCh)
 
 	return &recall, nil
+}
+
+func contains(itemList []string, item string) bool {
+	for _, item_ := range itemList {
+		if item_ == item {
+			return true
+		}
+	}
+
+	return false
 }

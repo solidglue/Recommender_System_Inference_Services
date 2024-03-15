@@ -6,11 +6,11 @@ import (
 )
 
 type RecRequest struct {
-	userId      string
-	dataId      string //nacos dataid
-	groupId     string //nacos groupId
-	namespaceId string //nacos namespaceId
-
+	userId       string
+	dataId       string   //nacos dataid
+	groupId      string   //nacos groupId
+	namespaceId  string   //nacos namespaceId
+	exposureList []string // filter the exposed items recently
 }
 
 // userId
@@ -47,6 +47,15 @@ func (r *RecRequest) SetNamespaceId(namespaceId string) {
 
 func (r *RecRequest) GetNamespaceId() string {
 	return r.namespaceId
+}
+
+// exposureList
+func (r *RecRequest) SetExposureList(exposureList []string) {
+	r.exposureList = exposureList
+}
+
+func (r *RecRequest) GetExposureList() []string {
+	return r.exposureList
 }
 
 // JavaClassName

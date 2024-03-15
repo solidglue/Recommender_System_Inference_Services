@@ -3,7 +3,7 @@ package infer_samples
 import (
 	"infer-microservices/internal/logs"
 	"infer-microservices/pkg/config_loader/model_config"
-	"infer-microservices/pkg/infer_samples/feature"
+	feature "infer-microservices/pkg/infer_features"
 	"time"
 )
 
@@ -20,7 +20,7 @@ func (b *InferSampleBuilder) GetInferSample() InferSample {
 	return b.inferSample
 }
 
-// TODO：特征过滤
+// TODO：feature filter
 // user offline feature build
 func (b *InferSampleBuilder) UserOfflineSampleBuilder(model model_config.ModelConfig, userId string, featureList []string) *InferSampleBuilder {
 	//get user offline example

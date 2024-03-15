@@ -1,4 +1,4 @@
-package feature
+package infer_features
 
 type SeqExampleBuff struct {
 	Key  *string
