@@ -28,7 +28,7 @@ The core components of model inference microservices are as follows：
 | Feature | [feature engineering](https://github.com/solidglue/Recommender_System_Inference_Services/tree/master/pkg/infer_features) | user offline、user realtime、user seq features and item features. |
 | Sample | [recall/rank samples](https://github.com/solidglue/RecommenderSystems-Inference-Microservices/tree/master/pkg/infer_samples) | create TFRcords format samples. |
 | Recall | [cf recall](https://github.com/solidglue/RecommenderSystems-Inference-Microservices/tree/master/pkg/infer_models/recall/cf) | user cf 、 item cf and swing.|
-|  | [dssm recall](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/pkg/infer_models/recall/dssm) | recall from dssm model and faiss index. |
+|  | [dssm recall](https://github.com/solidglue/Recommender_System_Inference_Services/blob/master/pkg/infer_models/recall/u2i/u2i_dssm_recall.go) | recall from dssm model and faiss index. |
 |  | [simple recall](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/pkg/infer_models/recall/simple_recall) | rules recall, such as hot items recall. |
 |  | [cold start](https://github.com/beachdogs/RecommenderSystems-Inference-Microservices/tree/master/pkg/infer_models/recall/cold_start) | new users and new items cold start. |
 | Rank | [pre_ranking](https://github.com/solidglue/RecommenderSystems-Inference-Microservices/tree/master/pkg/infer_models/pre_ranking)  |  thousands items pre_ranking after recall . |
